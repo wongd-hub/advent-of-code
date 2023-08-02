@@ -116,3 +116,27 @@ rucksack_contents %>%
 
 ## 03b Part 2 ----
 
+#' All elves are organised into groups of three, and each elf within each group
+#' carries a badge that identifies that group. This badge is the ONLY item that
+#' is carried by all three elves in a group.
+#' 
+#' - Need to find the item that is common across all three elves in each group
+#' - Every set of three lines corresponds to one group
+#' - Sum the priorities across all badge items (should be 100 badges since there
+#'   are 300 rucksacks)
+
+#' Split rucksack_contents into length-three character vectors first
+split(
+  rucksack_contents,
+  ceiling(seq_along(rucksack_contents) / 3)
+) %>% 
+  map_chr(~{
+    .x %>% 
+      map(~str_split_1(.x, '')) %>% 
+      reduce(intersect)
+  }) %>% 
+  tibble(badge_items = .) %>% 
+  left_join(priority_tbl, by = c('badge_items' = 'letter')) %>% 
+  .$priority %>% sum()
+
+#' Answer is [2363]

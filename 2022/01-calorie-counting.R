@@ -38,7 +38,7 @@ calories_split |>
   sapply(sum) |>
   max()
 
-#' The answer is [68802]
+#' Answer is [68802]
 
 ## 01b Part 2 ----
 
@@ -53,4 +53,4 @@ calories_sorted <- calories_split |>
 # Get sum of top 3 elves
 calories_sorted[1:3] |> sum()
 
-#' The answer is [205370]
+#' Answer is [205370]

@@ -222,4 +222,4 @@ rps_get_required_shape(rps_strategy_guide, keep_outcome = T) %>%
   .$you_total_score %>% 
   sum()
 
-#' The answer is [12767]
+#' Answer is [12767]
