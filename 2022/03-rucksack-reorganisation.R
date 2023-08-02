@@ -31,7 +31,8 @@ library(microbenchmark)
 ## 03a Part 1 ----
 
 ### Loading data ----
-#' Raw text file => one strategy per line character vector
+
+#' Raw text file => one rucksack per line character vector
 day_3_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_3', full.names = TRUE))
 rucksack_contents <- readLines(day_3_input_fp)
 
