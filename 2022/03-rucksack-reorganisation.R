@@ -29,7 +29,6 @@ library(tidyverse)
 library(microbenchmark)
 
 ## 03a Part 1 ----
-
 ### Loading data ----
 
 #' Raw text file => one rucksack per line character vector
@@ -98,7 +97,7 @@ if (F) {
   #> map(rucksack_contents[1:100], find_duplicated_items_attempt_1)   4.205167   4.326751   4.672882   4.379354   4.435001  16.52721   100
   #> map(rucksack_contents[1:100], find_duplicated_items_attempt_2) 674.846292 688.558501 702.241635 699.816376 704.793001 902.64738   100
   
-  #' find_duplicated_items_attempt_1 is faster, but gives us less information along the way
+  #' find_duplicated_items_attempt_1 is 150x faster, but gives us less information along the way
   
 }
 
