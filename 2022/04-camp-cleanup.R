@@ -157,3 +157,22 @@ if (F) {
 
 
 ## 04b Part 2 ----
+
+#' Now the elves want to know who has any overlapping work at all. Since ranges
+#' are contiguous, we can answer this by changing up the inequality.
+#' 
+#' Might be easier to go for the complement here; ie. how many pairs DO NOT 
+#' overlap at all? that would mean either:
+#' - Elf 1 To < Elf 2 From; or,
+#' - Elf 2 To < Elf 1 From
+
+overlapping_pairs <- !(
+  (elf_1$to < elf_2$from) |
+    (elf_2$to < elf_1$from)
+)
+
+#' We expect this to be larger than the previous answer since this is a superset
+#' of that
+sum(overlapping_pairs)
+
+#' Answer is [857]
