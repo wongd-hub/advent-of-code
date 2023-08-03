@@ -120,9 +120,7 @@ extract_instruction_nums <- function(str_instruction, return_single = F) {
 #'   `stack_to` values present
 #' @param crate_list A list containing crate stacks as vectors; with the top
 #'   crate as the first element, and the bottom crate as the last
-#' @param edit_global A string with the name of the global object to replace
-#'   with the resulting list. `NULL` if you don't want to edit a global object
-execute_instruction <- function(instruction, crate_list, edit_global = NULL) {
+execute_instruction <- function(instruction, crate_list) {
 
   #' Move [num_crates] crates from the top of [stack_from] to the top of
   #' [stack_to]
@@ -132,14 +130,10 @@ execute_instruction <- function(instruction, crate_list, edit_global = NULL) {
     moving_crate <- crate_list[[instruction$stack_from]][[1]]
     
     #' If resulting [stack_from] will be empty after move, replace with NA
-    if (length(crate_list[[instruction$stack_from]]) == 1) {
-      
-      crate_list[[instruction$stack_from]] <- NA_character_
-      
+    crate_list[[instruction$stack_from]] <- if (length(crate_list[[instruction$stack_from]]) == 1) {
+      NA_character_
     } else {
-      
-      crate_list[[instruction$stack_from]] <- crate_list[[instruction$stack_from]][2:length(crate_list[[instruction$stack_from]])]
-      
+      crate_list[[instruction$stack_from]][2:length(crate_list[[instruction$stack_from]])]
     }
     
     if (is.na(moving_crate)) {
@@ -148,84 +142,59 @@ execute_instruction <- function(instruction, crate_list, edit_global = NULL) {
     }
     
     #' Put moving crate on the top of [stack_to] - if [stack_to] is empty then replace the NA with it
-    if (length(crate_list[[instruction$stack_to]]) == 1 & is.na(crate_list[[instruction$stack_to]][[1]])) {
-      
-      crate_list[[instruction$stack_to]] <- moving_crate
-      
-    } else {
-      
-      crate_list[[instruction$stack_to]] <- c(moving_crate, crate_list[[instruction$stack_to]])
-      
-    }
+    crate_list[[instruction$stack_to]] <- if (
+      length(crate_list[[instruction$stack_to]]) == 1 & 
+        is.na(crate_list[[instruction$stack_to]][[1]])
+    ) moving_crate else c(moving_crate, crate_list[[instruction$stack_to]])
     
   }
   
-  if (!is.null(edit_global)) assign('edit_global', crate_list, envir = .GlobalEnv) else return(crate_list)
+  crate_list
   
 }
 
-#' Testing - assigning global doesn't seem to work yet, lets just do this in a global for-loop
-execute_instruction(extract_instruction_nums('move 1 from 1 to 2', return_vector = T), crate_stacks)
-execute_instruction(extract_instruction_nums('move 2 from 7 to 2', return_vector = T), crate_stacks)
+#' Testing
+execute_instruction(extract_instruction_nums('move 1 from 1 to 2', return_single = T), crate_stacks)
+execute_instruction(extract_instruction_nums('move 2 from 7 to 2', return_single = T), crate_stacks)
 
-if (F) {
-  
-  # Would assigning to separate vars for readability make this much slower?
-  execute_instruction_readable <- function(instruction, crate_list, edit_global = NULL) {
-    
-    #' Explicitly assign elements of the vector to their own vars, otherwise square bracket hell :)
-    stack_from <- instruction[['stack_from']]
-    stack_to   <- instruction[['stack_to']]
-    num_crates <- instruction[['num_crates']]
-    
-    #' Move [num_crates] crates from the top of [stack_from] to the top of
-    #' [stack_to]
-    for (i in 1:num_crates) {
-      
-      #' Shift crate off the top of [stack_from]
-      moving_crate <- crate_list[[stack_from]][[1]]
-      crate_list[[stack_from]] <- crate_list[[stack_from]][2:length(crate_list[[stack_from]])]
-      
-      #' Put moving crate on the top of [stack_to]
-      crate_list[[stack_to]] <- c(moving_crate, crate_list[[stack_to]])
-      
-    }
-    
-    if (!is.null(edit_global)) assign('edit_global', crate_list, envir = .GlobalEnv) else return(crate_list)
-    
-  }
-  
-  
-  microbenchmark(
-    no_extra_assignment = execute_instruction(extract_instruction_nums('move 2 from 7 to 2', return_vector = T), crate_stacks),
-    extra_assignment    = execute_instruction_readable(extract_instruction_nums('move 2 from 7 to 2', return_vector = T), crate_stacks)
-  )
-  
-  #> Unit: microseconds
-  #>                expr    min      lq     mean  median      uq     max neval
-  #> no_extra_assignment 96.793 97.8965 100.0982 98.6045 100.021 114.001   100
-  #> extra_assignment    95.667 96.7925 102.3545 97.5630  98.772 305.459   100
-  
-  # A little slower, for now, leave as it is
-  
-}
 
 ### Executing instructions ----
 
-crate_stacks_og <- crate_stacks
-
-#' If needed to reset
-if (F) crate_stacks <- crate_stacks_og
-
-for (i in 1:length(crate_movements)) {
+#' Run all instructions
+#'
+#' Takes a vector of string representations of the instructions, converts those
+#' to machine-readable, then executes them in sequence.
+#'
+#' @param instructions A character vector containing the instructions, e.g.
+#'   c('move 1 from 3 to 7', 'move 1 from 3 to 2')
+#' @param crate_pattern_list A list containing vectors, each representing a
+#'   crate stack
+#' @param verbose A boolean representing whether to print logs to console
+run_all_instructions <- function(instructions, crate_pattern_list, verbose = F) {
   
-  cat('Executing:', crate_movements[[i]], '\n')
+  instruction_list <- extract_instruction_nums(instructions)
+  crate_list <- crate_pattern_list
   
-  instruction_values <- extract_instruction_nums(crate_movements[[i]], return_vector = T)
+  for (i in 1:length(instruction_list)) {
+    
+    if (verbose) cat('Executing:', instructions[[i]], '\n')
+    
+    crate_list <- execute_instruction(instruction_list[[i]], crate_list)
+    
+  }
   
-  crate_stacks <- execute_instruction(instruction_values, crate_stacks)
-  #' There are NAs in the stacks now?? still NAs even with stop() built in. Go line by line to see what happens
+  crate_list
+  
 }
 
+#' Get final state of crate stacks
+final_crate_stacks <- run_all_instructions(crate_movements, crate_stacks, verbose = T)
 
-crate_stacks %>% sapply(first) %>% paste(collapse = '')
+#' Check for any NAs that might have snuck through
+final_crate_stacks %>% sapply(\(x) sum(is.na(x))) %>% sum() == 0 # TRUE
+
+#' Get top crate of each stack
+final_crate_stacks %>% sapply(first) %>% paste(collapse = '')
+
+#' Answer is [RFFFWBPNS]
+

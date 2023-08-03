@@ -98,7 +98,7 @@ if (F) {
               #' A leftover from the first attempt...
               # do.call(partial(seq, by = 1), section_range)
               
-              return(section_range)
+              section_range
               
             })
           

@@ -45,7 +45,7 @@ get_strategy_table <- function(.strategy, .strategy_tbl) {
     
   }
   
-  return (.strategy_tbl)
+  .strategy_tbl
   
 }
 
