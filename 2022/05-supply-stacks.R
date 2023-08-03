@@ -14,6 +14,9 @@
 #' 
 #' Which crates will be at the top of each pile at the end of this list of
 #' moves? These will be the required crates.
+#'
+#' Can't really vectorise here since the instructions must be executed
+#' sequentially.
 
 
 ## 05a Part 1 ----
@@ -123,7 +126,7 @@ extract_instruction_nums <- function(str_instruction, return_single = F) {
 execute_instruction <- function(instruction, crate_list) {
 
   #' Move [num_crates] crates from the top of [stack_from] to the top of
-  #' [stack_to]
+  #' [stack_to]. Perform in a for-loop since we need to move crates one at a time.
   for (i in 1:instruction$num_crates) {
     
     #' Shift crate off the top of [stack_from]
@@ -170,7 +173,7 @@ execute_instruction(extract_instruction_nums('move 2 from 7 to 2', return_single
 #' @param crate_pattern_list A list containing vectors, each representing a
 #'   crate stack
 #' @param verbose A boolean representing whether to print logs to console
-run_all_instructions <- function(instructions, crate_pattern_list, verbose = F) {
+run_all_instructions <- function(instructions, crate_pattern_list, execution_function = execute_instruction, verbose = F) {
   
   instruction_list <- extract_instruction_nums(instructions)
   crate_list <- crate_pattern_list
@@ -179,7 +182,7 @@ run_all_instructions <- function(instructions, crate_pattern_list, verbose = F) 
     
     if (verbose) cat('Executing:', instructions[[i]], '\n')
     
-    crate_list <- execute_instruction(instruction_list[[i]], crate_list)
+    crate_list <- execution_function(instruction_list[[i]], crate_list)
     
   }
   
@@ -198,3 +201,67 @@ final_crate_stacks %>% sapply(first) %>% paste(collapse = '')
 
 #' Answer is [RFFFWBPNS]
 
+## 05b Part 2 ----
+
+#' It turns out the crane the elf is using is a different model which can pick
+#' up multiple crates at once.
+
+#' Execute instruction (new crane)
+#'
+#' This crane can pick up and move more than 1 crate at a time (unlimited number
+#' of crates at a time).
+#'
+#' @param instruction A single named vector with `num_crates`, `stack_from`,
+#'   `stack_to` values present
+#' @param crate_list A list containing crate stacks as vectors; with the top
+#'   crate as the first element, and the bottom crate as the last
+execute_instruction_new_crane <- function(instruction, crate_list) {
+  
+  #' Move [num_crates] crates from the top of [stack_from] to the top of
+  #' [stack_to] simultaneously
+  
+  #' Since we're potentially taking multiple crates off [stack_from], make sure
+  #' we have enough in there first
+  if (length(crate_list[[instruction$stack_from]]) < instruction$num_crates) {
+    cat('Not enough crates in stack', instruction$stack_from)
+    stop()
+  }
+  
+  #' Shift crate/s off the top of [stack_from]
+  moving_crates <- crate_list[[instruction$stack_from]][1:instruction$num_crates]
+  
+  #' If resulting [stack_from] will be empty after move, replace with NA
+  crate_list[[instruction$stack_from]] <- if (length(crate_list[[instruction$stack_from]]) == instruction$num_crates) {
+    NA_character_
+  } else {
+    crate_list[[instruction$stack_from]][(instruction$num_crates+1):length(crate_list[[instruction$stack_from]])]
+  }
+  
+  if (any(is.na(moving_crates))) {
+    cat('Error - one of the moving crates does not exist in stack', instruction$stack_from)
+    stop()
+  }
+  
+  #' Put moving crates on the top of [stack_to] - if [stack_to] is empty then replace the NA with it
+  crate_list[[instruction$stack_to]] <- if (
+    length(crate_list[[instruction$stack_to]]) == 1 & 
+    is.na(crate_list[[instruction$stack_to]][[1]])
+  ) moving_crates else c(moving_crates, crate_list[[instruction$stack_to]])
+  
+  crate_list
+  
+}
+
+#' Testing
+execute_instruction_new_crane(extract_instruction_nums('move 4 from 1 to 2', return_single = T), crate_stacks)
+
+#' Sub in new execution function
+final_crate_stacks_new_crane <- run_all_instructions(crate_movements, crate_stacks, execute_instruction_new_crane, verbose = T)
+
+#' Check for any NAs that might have snuck through
+final_crate_stacks_new_crane %>% sapply(\(x) sum(is.na(x))) %>% sum() == 0 # TRUE
+
+#' Get top crate of each stack
+final_crate_stacks_new_crane %>% sapply(first) %>% paste(collapse = '')
+
+#' Answer is [CQQBBJFCS]
