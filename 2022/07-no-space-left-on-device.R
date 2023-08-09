@@ -16,6 +16,7 @@
 #' 
 #' Assume directories don't have any inherent size themselves.
 
+library(tidyverse)
 
 ## 07a Part 1 ----
 ### Data ingestion ----
@@ -41,9 +42,74 @@ system_commands <- readLines(day_7_input_fp)
 
 #' Pseudocode
 #  For every cd, record the overall filepath (/ + bcfwbq + ...), handling '..' as moving back one folder
-#  For every ls, populate the current working folder with the contents
+#  For every ls, populate the current working folder with the contents (dirs and files)
 
-command_crawler <- function(
+
+#### Function Definitions ----
+
+#' Handle '..'s in filepath
+#'
+#' We need to be able to handle '..'s which mean to move up one directory level.
+#' We won't handle this directly in the `case_when()` because of the complexity
+#' if this were passed in as part of a larger command (e.g. "hello/../world").
+#' Instead, we'll check the current directory for '..'s every time it's updated
+#' and remove them + the elements immediately preceding them to simulate moving
+#' up one dir lvl.
+#'
+#' @param directory A character vector representing the current directory, each
+#'   element being a directory level
+handle_updir <- function(string, updir_sym = symbols$updir) {
+  
+  #' Get location of '..'s and also the directories one level above
+  updir_markers <- which(string == updir_sym)
+  
+  if (length(updir_markers) > 0) {
+    
+    prev_dir <- updir_markers - 1
+    
+    to_remove <- c(prev_dir, updir_markers)
+    if (any(to_remove < 1)) stop('Internal error: an ".." is attempting to go above the home directory level')
+    
+    string[-to_remove]
+    
+  } else string
+  
+}
+
+#' Recursively traverse list and add empty list and/or file list
+#'
+#' We need a way to traverse a nested list and add new empty lists at any
+#' arbitrary level.
+#'
+#' @param list A list to recursively modify
+#' @param path A character vector containing the directory levels to check
+#' @param files A character vector containing files to add to the directory
+#'   selected in `path`
+recursive_add <- function(list, path, files = NULL) {
+  
+  # If the path is empty, return the list - our success condition
+  if (length(path) == 0) return(list)
+  
+  # Split the path into the current directory and the rest
+  target_dir <- path[1]
+  rest <- path[-1]
+  
+  # If the current part doesn't exist in the list, add it
+  if (!target_dir %in% names(list)) list[[target_dir]] <- list()
+  
+  # If the vector of files to add is non-NULL, and we're on the last directory
+  # in the path, append the files to the list
+  if (!is.null(files) & length(path) == 1) list[[target_dir]] <- list[[target_dir]] %>% append(files)
+  
+  # Walk down the list, and recursively modify the next level
+  list[[target_dir]] <- recursive_add(list[[target_dir]], rest, files = files)
+  
+  return(list)
+  
+}
+
+
+system_snapshot <- function(
   commands, 
   symbols = list(
     dir_sep = "/",
@@ -60,8 +126,6 @@ command_crawler <- function(
   #' Can't just extract all `$ cd`s, in case there is a directory found via 
   #' `$ ls` that is not then `cd`d into by the user
   
-  filesystem <- list()
-  
   #' Change the part of the filesystem list that we're in to emulate the working directory
   #' PULL THIS INTO A SEPARATE FUNCTION
   
@@ -74,71 +138,38 @@ command_crawler <- function(
   #' are [absolute] from the perspective of the home directory)
   dir_tree <- list()
   current_directory <- '~'
+  directory_index <- tibble(
+    directory  = list(current_directory), 
+    dir_string = paste(current_directory, collapse = '/')
+  )
+  
+  # list(
+  #   dir_tree = list(),
+  #   current_directory = '~',
+  #   directory_index = tibble(
+  #     directory  = list('~'), 
+  #     dir_string = paste(current_directory, collapse = '/')
+  #   )
+  # )
+  
+
   
   
-  #' We also need to be able to handle '..'s which mean to move up one
-  #' directory level. We won't handle this directly in the `case_when()`
-  #' because of the complexity if this were passed in as part of a larger
-  #' command (e.g. "hello/../world"). Instead, we'll check the current
-  #' directory for '..'s every time it's updated and remove them + the
-  #' elements immediately preceding them to simulate moving up one dir lvl.
-  
-  #' Handle '..'s in filepath
-  #'
-  #' @param directory A character vector representing the current directory,
-  #'   each element being a directory level
-  handle_updir <- function(string, updir_sym = symbols$updir) {
-    
-    #' Get location of '..'s and also the directories one level above
-    updir_markers <- which(string == updir_sym)
-    prev_dir <- updir_markers - 1
-    
-    to_remove <- c(prev_dir, updir_markers)
-    if (any(to_remove < 1)) stop('Internal error: an ".." is attempting to go above the home directory level')
-    
-    string[-to_remove]
-    
-  }
-  
-  
-  #' We need a way to traverse a nested list and add new empty lists at any
-  #' level as well.
-  
-  #' Recursive add
-  #'
-  #' @param list A list to recursively modify
-  #' @param path A character vector containing the directory levels to check
-  recursive_add <- function(list, path) {
-    
-    # If the path is empty, return the list - our success condition
-    if(length(path) == 0) return(list)
-    
-    # Split the path into the current directory and the rest
-    target_dir <- path[1]
-    rest <- path[-1]
-    
-    # If the current part doesn't exist in the list, add it
-    if(!target_dir %in% names(list)) list[[target_dir]] <- list()
-    
-    # Walk down the list, and recursively modify the next level
-    list[[target_dir]] <- recursive_add(list[[target_dir]], rest)
-    
-    return(list)
-    
-  }
+
   
   
   for (i in 1:length(commands)) {
     
-    if (verbose) cat('Parsing command', i, '\n')
+    if (verbose) cat('Current directory:', current_directory, '\n')
+    if (verbose) cat('Parsing command', i, '-', commands[[i]], '\n\n')
     
     #' If the command is to change directory...
     if (str_detect(commands[[i]], fixed(paste(symbols$user_input, symbols$change_dir)))) {
       
-      # PULL INTO SEPARATE FUNCTION? Too many args probably
+      # PULL INTO SEPARATE FUNCTION?
       
       #' Get directory we're changing to
-      dir_target <- str_remove(commands[[i]], fixed('$ cd '))
+      dir_target <- str_remove(commands[[i]], fixed(paste0(symbols$user_input, ' ', symbols$change_dir, ' ')))
       
       #' Find where we are in the directory tree
       #'   Can't use `case_when()` since it recycles RHS to the largest RHS
@@ -156,11 +187,11 @@ command_crawler <- function(
         str_split_1(dir_target, '/') %>% 
           `[`(2:length(.)) %>% 
           c('~', .)
-      } else (
+      } else {
         #' Otherwise, this will be a relative directory movement. Add the
         #' target directory to the current directory.
         c(current_directory, dir_target)
-      ) %>% 
+      } %>% 
         #' Then move up a directory for every '..' present
         handle_updir()
       
@@ -168,43 +199,128 @@ command_crawler <- function(
       #' and the levels leading to it, are in the `file_system` list. If it
       #' doesn't exist, add it.
       if (
-        length(current_directory) > 1 &
-          is.null(Reduce(`[[`, current_directory %>% `[`(2:length(.)), init = dir_tree))
+        length(current_directory) > 1
       ) {
         
-        #' Recursively create new directories for each non-existent path
-        dir_tree <- recursive_add(dir_tree, current_directory)
+        directory_index <- directory_index %>% 
+          add_row(
+            directory  = list(current_directory),
+            dir_string = paste(current_directory, collapse = '/')
+          )
         
+        
+        #' If doesn't exist in tree, add it
+        if (is.null(Reduce(`[[`, current_directory %>% `[`(2:length(.)), init = dir_tree))) {
+          
+          #' Recursively create new directories for each non-existent path
+          dir_tree <- recursive_add(dir_tree, current_directory)
+          
+        }
+
       }
       
     }
     
     #' If the command is `ls` then assign all files/directories found before
     #' the next command with a '$' at the start to the current directory
+    #' 
+    #' NB: Technically, if we don't explore these folders, we don't know what's
+    #' in them and therefore can't enumerate the overall size. However, we'll
+    #' add this code anyway to make sure we get a full view of the directory tree
     if (commands[[i]] == paste(symbols$user_input, symbols$list_dir_contents)) {
-      
-      # PULL INTO SEPARATE FUNCTION
-      
+
       remaining_console <- commands[(i + 1):length(commands)]
-      
+
       #' Where is the next user input?
-      next_user_input <- which(
-        str_detect(remaining_console, paste0('^\\', symbols$user_input))
-      ) %>% 
-        min()
+      suppressWarnings(
+        next_user_input <- which(
+          str_detect(remaining_console, paste0('^', '\\', symbols$user_input))
+        ) %>%
+          min()
+      )
       
-      #' This is the list of files and directories
-      remaining_console[1:(next_user_input - 1)]
       
+      cd_list <- if (length(next_user_input) > 0 & !is.infinite(next_user_input)) {
+        
+        #' If there are more commands later on, only grab up until the next command
+        #'  This is the list of files and directories before the next `cd`
+        remaining_console[1:(next_user_input - 1)]
+        
+      } else if (length(next_user_input) == 1 & is.infinite(next_user_input)) {
+        
+        #' Otherwise, if there are no more commands, just grab up to the end of the command list
+        remaining_console[1:length(remaining_console)]
+        
+      }
+        
+      #' Extracting listed files and directories
+      dirs <- cd_list %>% 
+        str_subset(fixed(paste0(symbols$dir_prefix, ' '))) %>% 
+        str_remove(fixed(paste0(symbols$dir_prefix, ' ')))
+
+      file_console_output <- cd_list %>% 
+        str_subset(paste0('^', symbols$file_prefix, ' '))
+      
+      file_list <- file_console_output %>% 
+        str_extract('^[0-9]+') %>% 
+        as.numeric() %>% 
+        setNames(
+          file_console_output %>% 
+            str_remove('^[0-9]+ ')
+        )
+      
+      #' Handling directories
+      #'  Loop over directories and add them to the tree
+      dirs %>% 
+        walk(~{
+          
+          # print(paste('Adding directory', .x, 'to', paste(current_directory, collapse = '/')))
+          
+          #' Set current directory temporarily to this subfolder
+          tmp_current_directory <- c(current_directory, .x)
+          
+          #' Add to directory index
+          directory_index <<- directory_index %>% 
+            add_row(
+              directory  = list(tmp_current_directory),
+              dir_string = paste(tmp_current_directory, collapse = '/')
+            )
+          
+          # print(dir_tree)
+          
+          #' Modify the directory tree if this subdirectory doesn't exist in it
+          dir_tree <<- recursive_add(dir_tree, tmp_current_directory)
+          
+          # print('Added...')
+          # print(dir_tree)
+          
+        })
+      
+      
+      #' Handling files
+      #'  Add files to the last directory in `current_directory`
+      dir_tree <- recursive_add(dir_tree, current_directory, files = file_list)
+      # append them separately or in their own character vector - either way you can just use unlist() at the end of it all
+
     }
     
   }
   
+  list(
+    dir_tree = dir_tree,
+    directory_index = directory_index %>% distinct(dir_string, .keep_all = TRUE)
+  )
+  
 } 
 
 
-command_crawler(system_commands, verbose = T)
+#' Check that folder traversal works 
+system_snapshot(system_commands %>% str_subset('cd'), verbose = T)
 
+#' Check that adding directories found in `ls` works
+system_snapshot(system_commands %>% str_subset('cd|ls|dir') %>% `[`(1:100), verbose = T)
+
+system_snapshot(system_commands[1:100], verbose = T)
 # later, create a lookup table with file sizes and then use that to sum???
 
 # or list(
@@ -213,6 +329,4 @@ command_crawler(system_commands, verbose = T)
 # )
 # First option might be easier to do the sum in - just unlist() the top level folder and lookup all filenames in table
 
-Or list(
-  
-)
+What if there are duplicate filenames??? What if we added vectors with name = filename and value = filesize? Then unlist and sum all later?
