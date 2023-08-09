@@ -24,14 +24,28 @@ source(file.path('2022', 'utils', 'libs_and_funs.R'))
 ### Data ingestion ----
 
 #'  Which line is empty / is the divider?
-crates_raw <- get_input(2022, 5)
-divider_idx <- which(crates_raw == '')
+crates_raw <- get_input(
+  2022, 5,
+  read_fn = function(fp) {
+    
+    raw_input <- readLines(fp)
+    
+    #' An empty line divides the crate drawing and the crate movement
+    #' instructions
+    divider_idx <- which(raw_input == '')
+    
+    list(
+      #' Crate drawings are above the divider
+      crate_drawings = raw_input[1:(divider_idx - 1)],
+      #' Crate movement instructions are below
+      crate_movements = raw_input[(divider_idx + 1):length(raw_input)]
+    )
+    
+  }
+)
 
-#'  => crate drawings
-crate_drawings <- crates_raw[1:(divider_idx - 1)]
-
-#'  => crate movements
-crate_movements <- crates_raw[(divider_idx+1):length(crates_raw)]
+crate_drawings <- crates_raw$crate_drawings
+crate_movements <- crates_raw$crate_movements
 
 ### Crate Drawing Manipulation ----
 
