@@ -15,13 +15,12 @@
 #' 
 #' Sum your total scores across the entire strategy guide.
 
-library(tidyverse)
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 02a Part 1 ----
 
 #' Raw text file => one strategy per line character vector
-day_2_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_2', full.names = TRUE))
-rps_strategy_guide <- readLines(day_2_input_fp)
+rps_strategy_guide <- get_input(2022, 2)
 
 #' Define functions + helpers to manipulate strategy data and score
 

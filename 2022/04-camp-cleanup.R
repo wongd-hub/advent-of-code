@@ -12,15 +12,13 @@
 #' 
 #' In how many assignment pairs does one range fully contain the other?
 
-library(tidyverse)
-library(microbenchmark)
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 04a Part 1 ----
 ### Answer ----
 
 #' Raw text file => pair-wise camp section assignments
-day_4_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_4', full.names = TRUE))
-camp_sections  <- readLines(day_4_input_fp)
+camp_sections  <- get_input(2022, 4)
 
 #' Split the strings down into elf 1 and elf 2, then down again into segment
 #' from/to pairs for each elf. Convert final numbers to numerics otherwise 

@@ -13,12 +13,12 @@
 #' How many characters need to be processed before the first start-of-packet
 #' marker is identified?
 
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 06a Part 1 ----
 
 #' Raw text file - huge character string
-day_6_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_6', full.names = TRUE))
-datastream <- readLines(day_6_input_fp)
+datastream <- get_input(2022, 6)
 
 #' Approach options:
 #' - Split this string into staggered groups of 4 - 1:4, 2:5, 3:6, etc. and 

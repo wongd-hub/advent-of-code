@@ -16,13 +16,12 @@
 #' 
 #' Assume directories don't have any inherent size themselves.
 
-library(tidyverse)
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 07a Part 1 ----
 ### Data ingestion ----
 #' Raw text file - use empty line to delimit the crate drawing and the instructions.
-day_7_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_7', full.names = TRUE))
-system_commands <- readLines(day_7_input_fp)
+system_commands <- get_input(2022, 7)
 
 #' Two things we need to do 
 #' - Determine the directory structure

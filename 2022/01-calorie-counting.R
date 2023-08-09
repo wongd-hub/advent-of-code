@@ -12,15 +12,13 @@
 #'  
 #'    Means that elf 1 is carrying 6000 calories, and elf 2 is carrying 2000
 
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
+
 ## 01a Part 1 ----
 
 #' Elves need to know which elf to ask if they get hungry - ie. which elf has the most calories on them?
-
-#' Raw text file
-day_1_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_1', full.names = TRUE))
-
 #' readLines puts every new line into an element of a character vector
-calories_raw <- readLines(day_1_input_fp) |> 
+calories_raw <- get_input(2022, 1) |> 
   # Convert characters to numerics. Blank/newlines become NA
   as.numeric()
 

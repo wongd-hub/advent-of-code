@@ -25,15 +25,13 @@
 #' Find the item type that appears in both compartments of each rucksack. What is the 
 #' sum of the priorities of those item types?
 
-library(tidyverse)
-library(microbenchmark)
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 03a Part 1 ----
 ### Loading data ----
 
 #' Raw text file => one rucksack per line character vector
-day_3_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_3', full.names = TRUE))
-rucksack_contents <- readLines(day_3_input_fp)
+rucksack_contents <- get_input(2022, 3)
 
 #' Priorities // `letters` is a built in vector that contains all alphabet letters
 priority_tbl <- c(letters, toupper(letters)) %>% 

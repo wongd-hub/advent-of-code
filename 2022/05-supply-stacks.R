@@ -18,19 +18,17 @@
 #' Can't really vectorise here since the instructions must be executed
 #' sequentially.
 
+source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 05a Part 1 ----
 ### Data ingestion ----
 
-#' Raw text file - use empty line to delimit the crate drawing and the instructions.
-day_5_input_fp <- max(list.files(file.path('2022', 'inputs'), 'day_5', full.names = TRUE))
-
 #'  Which line is empty / is the divider?
-crates_raw <- readLines(day_5_input_fp)
+crates_raw <- get_input(2022, 5)
 divider_idx <- which(crates_raw == '')
 
 #'  => crate drawings
-crate_drawings <- crates_raw[1:(divider_idx - 1)] # readLines(day_5_input_fp, divider_idx - 1)
+crate_drawings <- crates_raw[1:(divider_idx - 1)]
 
 #'  => crate movements
 crate_movements <- crates_raw[(divider_idx+1):length(crates_raw)]
