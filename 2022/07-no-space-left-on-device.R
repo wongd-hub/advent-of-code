@@ -11,7 +11,7 @@
 #'   - Commands input by the user start with a `$`
 #'
 #' The goal is to get the size of each directory (at every level). For the first
-#' part of the question, get the size of all directories under 100k in size and
+#' part of the question, get the size of all directories at most 100k in size and
 #' sum them (allowing for double-counting files).
 #' 
 #' Assume directories don't have any inherent size themselves.
@@ -36,6 +36,20 @@ system_commands <- get_input(2022, 7)
 #' - Then have a look-up table with all file sizes, easy to create; just run regex 
 #'   over entire list of commands
 #' - It appears that not all files have filetypes ('.yyy'), so prefix with 'file:'
+
+#' An alternative to this (possibly easier to handle, and easier to understand) 
+#' is to use nested tibbles to represent the file structure; e.g.:
+#'
+#'  file_path_until_current_dir current_dir                           files
+#'                c('~', 'foo')       'baz' c('file1' = 123, 'subdir1' = 0)
+#'         c('~', 'foo', 'baz')   'subdir1'                c('file2' = 789)
+#'
+#' This means we wouldn't need recursive functions to add new subdirs, just
+#' `add_row()` to this table. Then to get the total size of folder 'foo', filter
+#' for file paths: 
+#'  - That contain `current_dir` == 'foo' and `file_path_until_current_dir` == c('~')
+#'  - And; with `file_path_until_current_dir` == c('~', 'foo') to get subdirs
+ 
 
 ### Revealing the file system ----
 #### Function Definitions ----
@@ -375,3 +389,9 @@ system_model$dir_sizes %>%
   .$dir_size %>% sum()
 
 #' Answer is [1581595]
+
+## 07b Part 2 ----
+
+#' We now want to clear enough space on the system 
+#'  - We have 70000000 of space
+#'  - We need 30000000 of space to conduct an update
