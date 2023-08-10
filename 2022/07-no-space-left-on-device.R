@@ -135,15 +135,21 @@ system_snapshot <- function(
   #' `cd`, check to see where we are in relation to home (`cd`s without a '/'
   #' in front of the path are [relative], whereas those that start with '/'
   #' are [absolute] from the perspective of the home directory)
-  dir_tree <- list()
-  current_directory <- '~'
-  directory_index <- tibble(directory = list(current_directory))
+  # dir_tree <- list()
+  # current_directory <- '~'
+  # directory_index <- tibble(directory = list(current_directory))
+  
+  data <- list(
+    dir_tree = list(),
+    current_directory = '~',
+    directory_index = tibble(directory = list('~'))
+  )
 
   #' Loop over all commands and action them
   for (i in 1:length(commands)) {
     
     if (verbose) {
-      cat('Current directory:', current_directory, '\n')
+      cat('Current directory:', data$current_directory, '\n')
       cat('Parsing command', i, '-', commands[[i]], '\n\n')
     }
     
@@ -158,7 +164,7 @@ system_snapshot <- function(
       #' Find where we are in the directory tree
       #'   Can't use `case_when()` since it recycles RHS to the largest RHS
       #'   output supplied. Use if-else instead.
-      current_directory <- if (
+      data$current_directory <- if (
         #' If we're navigating to the home directory - move us back there
         dir_target == symbols$dir_sep
       ) {
@@ -172,7 +178,7 @@ system_snapshot <- function(
       } else {
         #' Otherwise, this will be a relative directory movement. Add the
         #' target directory to the current directory.
-        c(current_directory, dir_target)
+        c(data$current_directory, dir_target)
       } %>% 
         #' Then move up a directory for every '..' present
         handle_updir(updir_sym = symbols$updir)
@@ -181,18 +187,18 @@ system_snapshot <- function(
       #' and the levels leading to it, are in the `file_system` list. If it
       #' doesn't exist, add it.
       if (
-        length(current_directory) > 1
+        length(data$current_directory) > 1
       ) {
         
-        directory_index <- directory_index %>% 
-          add_row(directory = list(current_directory))
+        data$directory_index <- data$directory_index %>% 
+          add_row(directory = list(data$current_directory))
         
         
         #' If doesn't exist in tree, add it
-        if (is.null(Reduce(`[[`, current_directory, init = dir_tree))) {
+        if (is.null(Reduce(`[[`, data$current_directory, init = data$dir_tree))) {
           
           #' Recursively create new directories for each non-existent path
-          dir_tree <- recursive_add(dir_tree, current_directory)
+          data$dir_tree <- recursive_add(data$dir_tree, data$current_directory)
           
         }
 
@@ -252,29 +258,29 @@ system_snapshot <- function(
       dirs %>% 
         walk(~{
           
-          # print(paste('Adding directory', .x, 'to', paste(current_directory, collapse = '/')))
+          # print(paste('Adding directory', .x, 'to', paste(data$current_directory, collapse = '/')))
           
           #' Set current directory temporarily to this subfolder
-          tmp_current_directory <- c(current_directory, .x)
+          tmp_current_directory <- c(data$current_directory, .x)
           
           #' Add to directory index
-          directory_index <<- directory_index %>% 
+          data$directory_index <- data$directory_index %>% 
             add_row(directory = list(tmp_current_directory))
           
-          # print(dir_tree)
+          # print(data$dir_tree)
           
           #' Modify the directory tree if this subdirectory doesn't exist in it
-          dir_tree <<- recursive_add(dir_tree, tmp_current_directory)
+          data$dir_tree <- recursive_add(data$dir_tree, tmp_current_directory)
           
           # print('Added...')
-          # print(dir_tree)
+          # print(data$dir_tree)
           
         })
       
       
       #' Handling files
       #'  Add files to the last directory in `current_directory`
-      dir_tree <- recursive_add(dir_tree, current_directory, files = file_list)
+      data$dir_tree <- recursive_add(data$dir_tree, data$current_directory, files = file_list)
       # append them separately or in their own character vector - either way you can just use unlist() at the end of it all
 
     }
@@ -282,11 +288,11 @@ system_snapshot <- function(
   }
 
   #' Once done, go into each part of the tree, unlist, and sum to get total size.
-  dir_sizes <- directory_index %>% 
+  dir_sizes <- data$directory_index %>% 
     distinct(directory) %>% 
     pmap_dfr(~{
       
-      working_dir <- Reduce(`[[`, .x, init = dir_tree)
+      working_dir <- Reduce(`[[`, .x, init = data$dir_tree)
       
       tibble(
         directory = list(.x),
@@ -298,7 +304,7 @@ system_snapshot <- function(
   
   
   list(
-    dir_tree  = dir_tree,
+    dir_tree  = data$dir_tree,
     dir_sizes = dir_sizes 
   )
   
