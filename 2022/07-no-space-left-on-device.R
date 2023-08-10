@@ -393,5 +393,26 @@ system_model$dir_sizes %>%
 ## 07b Part 2 ----
 
 #' We now want to clear enough space on the system 
+#'
 #'  - We have 70000000 of space
 #'  - We need 30000000 of space to conduct an update
+#'
+#' What is the smallest directory we can delete that will give us enough space
+#' to perform this update? What is the size of that directory?
+
+#' Parameters
+total_space  <- 70000000
+space_needed <- 30000000
+space_taken  <- system_model$dir_sizes %>% filter(dir_string == '~') %>% pull(dir_size)
+
+#' Calculation
+space_available <- total_space - space_taken
+need_to_clear   <- space_needed - space_available
+
+#' Which folder has the smallest size above `need_to_clear`?
+system_model$dir_sizes %>% 
+  filter(dir_size >= need_to_clear) %>% 
+  .$dir_size %>% 
+  min()
+
+#' The answer is [1544176]
