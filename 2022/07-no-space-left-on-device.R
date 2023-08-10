@@ -38,12 +38,6 @@ system_commands <- get_input(2022, 7)
 #' - It appears that not all files have filetypes ('.yyy'), so prefix with 'file:'
 
 ### Revealing the file system ----
-
-#' Pseudocode
-#  For every cd, record the overall filepath (/ + bcfwbq + ...), handling '..' as moving back one folder
-#  For every ls, populate the current working folder with the contents (dirs and files)
-
-
 #### Function Definitions ----
 
 #' Handle '..'s in filepath
@@ -107,7 +101,165 @@ recursive_add <- function(list, path, files = NULL) {
   
 }
 
+#' Handle a 'change directory' command
+#'
+#' This function will parse a `cd` command to: 
+#'   1. Find what folder we want to traverse to in relation to the 
+#'      current directory, change the `current_directory` to this
+#'   2. Add that folder to the `directory_index` and add an empty 
+#'      sub-folder to the `dir_tree` if it doesn't already exist
+#'
+#' @param command_idx An integer representing which command to action
+#' @param data_object List passed in by `system_snapshot()`
+handle_change_dir <- function(
+    command_idx,
+    data_object
+) {
+  
+  #' Get directory we're changing to
+  dir_target <- str_remove(
+    data_object$command[[command_idx]], 
+    fixed(paste0(data_object$symbols$user_input, ' ', data_object$symbols$change_dir, ' '))
+  )
+  
+  #' Find where we are in the directory tree
+  #'   Can't use `case_when()` since it recycles RHS to the largest RHS
+  #'   output supplied. Use if-else instead.
+  data_object$current_directory <- if (
+    #' If we're navigating to the home directory - move us back there
+    dir_target == data_object$symbols$dir_sep
+  ) {
+    '~'
+  } else if (
+    #' Else if the path is an absolute path (starts with a '/') then build
+    #' the full path, splitting by '/'
+    str_sub(dir_target, 1, 1) == data_object$symbols$dir_sep & nchar(dir_target) > 1
+  ) {
+    str_split_1(dir_target, '/') %>% `[`(2:length(.)) %>% c('~', .)
+  } else {
+    #' Otherwise, this will be a relative directory movement. Add the
+    #' target directory to the current directory.
+    c(data_object$current_directory, dir_target)
+  } %>% 
+    #' Then move up a directory for every '..' present
+    handle_updir(updir_sym = data_object$symbols$updir)
+  
+  #' Each time the current directory is updated, see if that directory,
+  #' and the levels leading to it, are in the `file_system` list. If it
+  #' doesn't exist, add it.
+  if (
+    length(data_object$current_directory) > 1
+  ) {
+    
+    data_object$directory_index <- data_object$directory_index %>% 
+      add_row(directory = list(data_object$current_directory))
+    
+    #' If doesn't exist in tree, add it
+    if (is.null(Reduce(`[[`, data_object$current_directory, init = data_object$dir_tree))) {
+      
+      #' Recursively create new directories for each non-existent path
+      data_object$dir_tree <- recursive_add(data_object$dir_tree, data_object$current_directory)
+      
+    }
+    
+  }
+  
+  data_object
+  
+}
 
+#' Handle a 'list directory' command
+#' 
+#' This function parses a `ls` command to:
+#'   1. Find the relevant output of this `ls` command, extract files 
+#'      and directories from it
+#'   2. For directories, add to the `directory_index` and `dir_tree` 
+#'      if they don't already exist there
+#'   3. For files, add them to the relevant directory as a named numeric 
+#'      vector, where the vector item represents the file's size
+#' 
+#' @param command_idx An integer representing which command to action
+#' @param data_object List passed in by `system_snapshot()`
+handle_list_dir <- function(
+  command_idx,
+  data_object
+) {
+  
+  #' Get the remaining console commands/outputs
+  remaining_console <- data_object$commands[(command_idx + 1):length(data_object$commands)]
+  
+  #' Find the next user input in the remaining console output
+  suppressWarnings(
+    next_user_input <- which(
+      str_detect(remaining_console, paste0('^', '\\', data_object$symbols$user_input))
+    ) %>%
+      min()
+  )
+  
+  cd_list <- if (length(next_user_input) > 0 & !is.infinite(next_user_input)) {
+    
+    #' If there are more commands later on, only grab up until the next command
+    #'  This is the list of files and directories before the next `cd`
+    remaining_console[1:(next_user_input - 1)]
+    
+  } else if (length(next_user_input) == 1 & is.infinite(next_user_input)) {
+    
+    #' Otherwise, if there are no more commands, just grab up to the end of the command list
+    remaining_console[1:length(remaining_console)]
+    
+  }
+  
+  #' Extracting listed files and directories
+  dirs <- cd_list %>% 
+    str_subset(fixed(paste0(data_object$symbols$dir_prefix, ' '))) %>% 
+    str_remove(fixed(paste0(data_object$symbols$dir_prefix, ' ')))
+  
+  file_console_output <- cd_list %>% 
+    str_subset(paste0('^', data_object$symbols$file_prefix, ' '))
+  
+  file_list <- file_console_output %>% 
+    str_extract('^[0-9]+') %>% 
+    as.numeric() %>% 
+    setNames(
+      file_console_output %>% 
+        str_remove('^[0-9]+ ')
+    )
+  
+  #' Handling directories
+  #'  Loop over directories and add them to the tree
+  dirs %>% 
+    walk(~{
+      
+      #' Set current directory temporarily to this subfolder
+      tmp_current_directory <- c(data_object$current_directory, .x)
+      
+      #' Add to directory index
+      data_object$directory_index <- data_object$directory_index %>% 
+        add_row(directory = list(tmp_current_directory))
+      
+      #' Modify the directory tree if this subdirectory doesn't exist in it
+      data_object$dir_tree <- recursive_add(data_object$dir_tree, tmp_current_directory)
+      
+    })
+  
+  
+  #' Handling files
+  #'  Add files to the last directory in `current_directory`
+  data_object$dir_tree <- recursive_add(data_object$dir_tree, data_object$current_directory, files = file_list)
+  
+  data_object
+  
+}
+
+#' Create a system snapshot and calculate the size of each folder
+#'
+#' Loops over all system commands/outputs and parses them to create a snapshot
+#' of the directory structure (`dir_tree`) and a table with the size of each
+#' folder (`dir_size`, derived from `directory_index`)
+#'
+#' @param commands A character vector containing the commands/outputs
+#' @param symbols A list containing all relevant command line symbols
+#' @param verbose A boolean - whether to print logs to console
 system_snapshot <- function(
   commands, 
   symbols = list(
@@ -121,194 +273,84 @@ system_snapshot <- function(
   ),
   verbose = FALSE
 ) {
-  
-  #' Can't just extract all `$ cd`s, in case there is a directory found via 
-  #' `$ ls` that is not then `cd`d into by the user
-  
-  #' Change the part of the filesystem list that we're in to emulate the working directory
-  #' PULL THIS INTO A SEPARATE FUNCTION
-  
-  #' We know the filesystem starts a '/'. When we see a `cd`, we need to know
-  #' where it is in relation to '/'.
-  
-  #' The top level of this list represents the home directory. When we see a
-  #' `cd`, check to see where we are in relation to home (`cd`s without a '/'
-  #' in front of the path are [relative], whereas those that start with '/'
-  #' are [absolute] from the perspective of the home directory)
-  # dir_tree <- list()
-  # current_directory <- '~'
-  # directory_index <- tibble(directory = list(current_directory))
-  
-  data <- list(
-    dir_tree = list(),
+
+  #' Data payload, this will contain data structures that will be edited as each
+  #' command is executed.
+  .data <- list(
+    
+    #' Data structures
+    #'  Representations of the directory tree and the current
+    #'  working directory
+    dir_tree          = list(),
     current_directory = '~',
-    directory_index = tibble(directory = list('~'))
+    directory_index   = tibble(directory = list('~')),
+    
+    #' User input
+    commands          = commands,
+    symbols           = symbols
+    
   )
 
   #' Loop over all commands and action them
-  for (i in 1:length(commands)) {
+  for (i in 1:length(.data$commands)) {
     
+    #' Log to console if `verbose`
     if (verbose) {
-      cat('Current directory:', data$current_directory, '\n')
+      cat('Current directory:', .data$current_directory, '\n')
       cat('Parsing command', i, '-', commands[[i]], '\n\n')
     }
     
-    #' If the command is to change directory...
-    if (str_detect(commands[[i]], fixed(paste(symbols$user_input, symbols$change_dir)))) {
-      
-      # PULL INTO SEPARATE FUNCTION?
-      
-      #' Get directory we're changing to
-      dir_target <- str_remove(commands[[i]], fixed(paste0(symbols$user_input, ' ', symbols$change_dir, ' ')))
-      
-      #' Find where we are in the directory tree
-      #'   Can't use `case_when()` since it recycles RHS to the largest RHS
-      #'   output supplied. Use if-else instead.
-      data$current_directory <- if (
-        #' If we're navigating to the home directory - move us back there
-        dir_target == symbols$dir_sep
-      ) {
-        '~'
-      } else if (
-        #' Else if the path is an absolute path (starts with a '/') then build
-        #' the full path, splitting by '/'
-        str_sub(dir_target, 1, 1) == symbols$dir_sep & nchar(dir_target) > 1
-      ) {
-        str_split_1(dir_target, '/') %>% `[`(2:length(.)) %>% c('~', .)
-      } else {
-        #' Otherwise, this will be a relative directory movement. Add the
-        #' target directory to the current directory.
-        c(data$current_directory, dir_target)
-      } %>% 
-        #' Then move up a directory for every '..' present
-        handle_updir(updir_sym = symbols$updir)
-      
-      #' Each time the current directory is updated, see if that directory,
-      #' and the levels leading to it, are in the `file_system` list. If it
-      #' doesn't exist, add it.
-      if (
-        length(data$current_directory) > 1
-      ) {
-        
-        data$directory_index <- data$directory_index %>% 
-          add_row(directory = list(data$current_directory))
-        
-        
-        #' If doesn't exist in tree, add it
-        if (is.null(Reduce(`[[`, data$current_directory, init = data$dir_tree))) {
-          
-          #' Recursively create new directories for each non-existent path
-          data$dir_tree <- recursive_add(data$dir_tree, data$current_directory)
-          
-        }
-
-      }
-      
-    }
     
-    #' If the command is `ls` then assign all files/directories found before
-    #' the next command with a '$' at the start to the current directory
-    #' 
-    #' NB: Technically, if we don't explore these folders, we don't know what's
-    #' in them and therefore can't enumerate the overall size. However, we'll
-    #' add this code anyway to make sure we get a full view of the directory tree
-    if (commands[[i]] == paste(symbols$user_input, symbols$list_dir_contents)) {
+    #' Handle change directory/list directory commands
+    if ( #' If the command is to change directory...
+      str_detect(.data$commands[[i]], fixed(paste(.data$symbols$user_input, .data$symbols$change_dir)))
+    ) {
 
-      remaining_console <- commands[(i + 1):length(commands)]
-
-      #' Where is the next user input?
-      suppressWarnings(
-        next_user_input <- which(
-          str_detect(remaining_console, paste0('^', '\\', symbols$user_input))
-        ) %>%
-          min()
-      )
+      #' If the command is `cd`, then switch `current_directory` and check to
+      #' see if that directory is in the `dir_tree` yet. If not, add it.
+      #'
+      #' NB: 
+      #'  `cd`s without a '/' in front of the path are [relative], whereas
+      #'  those that start with '/' are [absolute] from the perspective of the
+      #'  home directory
+      .data <- handle_change_dir(command_idx = i, data_object = .data)
       
-      cd_list <- if (length(next_user_input) > 0 & !is.infinite(next_user_input)) {
-        
-        #' If there are more commands later on, only grab up until the next command
-        #'  This is the list of files and directories before the next `cd`
-        remaining_console[1:(next_user_input - 1)]
-        
-      } else if (length(next_user_input) == 1 & is.infinite(next_user_input)) {
-        
-        #' Otherwise, if there are no more commands, just grab up to the end of the command list
-        remaining_console[1:length(remaining_console)]
-        
-      }
-        
-      #' Extracting listed files and directories
-      dirs <- cd_list %>% 
-        str_subset(fixed(paste0(symbols$dir_prefix, ' '))) %>% 
-        str_remove(fixed(paste0(symbols$dir_prefix, ' ')))
-
-      file_console_output <- cd_list %>% 
-        str_subset(paste0('^', symbols$file_prefix, ' '))
+    } else if ( #' If the command is to list directory contents...
+      .data$commands[[i]] == paste(.data$symbols$user_input, .data$symbols$list_dir_contents)
+    ) {
       
-      file_list <- file_console_output %>% 
-        str_extract('^[0-9]+') %>% 
-        as.numeric() %>% 
-        setNames(
-          file_console_output %>% 
-            str_remove('^[0-9]+ ')
-        )
+      #' If the command is `ls` then assign all files/directories found before
+      #' the next command with a '$' at the start to the current directory
+      .data <- handle_list_dir(command_idx = i, data_object = .data)
       
-      #' Handling directories
-      #'  Loop over directories and add them to the tree
-      dirs %>% 
-        walk(~{
-          
-          # print(paste('Adding directory', .x, 'to', paste(data$current_directory, collapse = '/')))
-          
-          #' Set current directory temporarily to this subfolder
-          tmp_current_directory <- c(data$current_directory, .x)
-          
-          #' Add to directory index
-          data$directory_index <- data$directory_index %>% 
-            add_row(directory = list(tmp_current_directory))
-          
-          # print(data$dir_tree)
-          
-          #' Modify the directory tree if this subdirectory doesn't exist in it
-          data$dir_tree <- recursive_add(data$dir_tree, tmp_current_directory)
-          
-          # print('Added...')
-          # print(data$dir_tree)
-          
-        })
-      
-      
-      #' Handling files
-      #'  Add files to the last directory in `current_directory`
-      data$dir_tree <- recursive_add(data$dir_tree, data$current_directory, files = file_list)
-      # append them separately or in their own character vector - either way you can just use unlist() at the end of it all
-
     }
     
   }
 
-  #' Once done, go into each part of the tree, unlist, and sum to get total size.
-  dir_sizes <- data$directory_index %>% 
+  #' Once done, go into each part of the tree, un-list, and sum to get total size.
+  dir_sizes <- .data$directory_index %>% 
     distinct(directory) %>% 
     pmap_dfr(~{
       
-      working_dir <- Reduce(`[[`, .x, init = data$dir_tree)
+      #' Traverse to the required point of the tree
+      working_dir <- Reduce(`[[`, .x, init = .data$dir_tree)
       
       tibble(
         directory = list(.x),
         dir_string = paste(.x, collapse = '/'),
+        #' Flatten structure to sum all files under that point in the tree
         dir_size = working_dir %>% unlist() %>% sum()
       )
       
     })
   
-  
+  #' Return final objects
   list(
-    dir_tree  = data$dir_tree,
+    dir_tree  = .data$dir_tree,
     dir_sizes = dir_sizes 
   )
   
-} 
+}
 
 #' Testing 
 if (F) {
@@ -324,7 +366,7 @@ if (F) {
   
 }
 
-#' Answer
+### Answer ----
 system_model <- system_snapshot(system_commands)
 
 system_model$dir_sizes %>% 
