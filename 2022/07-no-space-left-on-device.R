@@ -57,7 +57,7 @@ system_commands <- get_input(2022, 7)
 #'
 #' @param directory A character vector representing the current directory, each
 #'   element being a directory level
-handle_updir <- function(string, updir_sym = symbols$updir) {
+handle_updir <- function(string, updir_sym = '..') {
   
   #' Get location of '..'s and also the directories one level above
   updir_markers <- which(string == updir_sym)
@@ -137,30 +137,15 @@ system_snapshot <- function(
   #' are [absolute] from the perspective of the home directory)
   dir_tree <- list()
   current_directory <- '~'
-  directory_index <- tibble(
-    directory  = list(current_directory), 
-    dir_string = paste(current_directory, collapse = '/')
-  )
-  
-  # list(
-  #   dir_tree = list(),
-  #   current_directory = '~',
-  #   directory_index = tibble(
-  #     directory  = list('~'), 
-  #     dir_string = paste(current_directory, collapse = '/')
-  #   )
-  # )
-  
+  directory_index <- tibble(directory = list(current_directory))
 
-  
-  
-
-  
-  
+  #' Loop over all commands and action them
   for (i in 1:length(commands)) {
     
-    if (verbose) cat('Current directory:', current_directory, '\n')
-    if (verbose) cat('Parsing command', i, '-', commands[[i]], '\n\n')
+    if (verbose) {
+      cat('Current directory:', current_directory, '\n')
+      cat('Parsing command', i, '-', commands[[i]], '\n\n')
+    }
     
     #' If the command is to change directory...
     if (str_detect(commands[[i]], fixed(paste(symbols$user_input, symbols$change_dir)))) {
@@ -183,16 +168,14 @@ system_snapshot <- function(
         #' the full path, splitting by '/'
         str_sub(dir_target, 1, 1) == symbols$dir_sep & nchar(dir_target) > 1
       ) {
-        str_split_1(dir_target, '/') %>% 
-          `[`(2:length(.)) %>% 
-          c('~', .)
+        str_split_1(dir_target, '/') %>% `[`(2:length(.)) %>% c('~', .)
       } else {
         #' Otherwise, this will be a relative directory movement. Add the
         #' target directory to the current directory.
         c(current_directory, dir_target)
       } %>% 
         #' Then move up a directory for every '..' present
-        handle_updir()
+        handle_updir(updir_sym = symbols$updir)
       
       #' Each time the current directory is updated, see if that directory,
       #' and the levels leading to it, are in the `file_system` list. If it
@@ -202,14 +185,11 @@ system_snapshot <- function(
       ) {
         
         directory_index <- directory_index %>% 
-          add_row(
-            directory  = list(current_directory),
-            dir_string = paste(current_directory, collapse = '/')
-          )
+          add_row(directory = list(current_directory))
         
         
         #' If doesn't exist in tree, add it
-        if (is.null(Reduce(`[[`, current_directory %>% `[`(2:length(.)), init = dir_tree))) {
+        if (is.null(Reduce(`[[`, current_directory, init = dir_tree))) {
           
           #' Recursively create new directories for each non-existent path
           dir_tree <- recursive_add(dir_tree, current_directory)
@@ -237,7 +217,6 @@ system_snapshot <- function(
         ) %>%
           min()
       )
-      
       
       cd_list <- if (length(next_user_input) > 0 & !is.infinite(next_user_input)) {
         
@@ -280,10 +259,7 @@ system_snapshot <- function(
           
           #' Add to directory index
           directory_index <<- directory_index %>% 
-            add_row(
-              directory  = list(tmp_current_directory),
-              dir_string = paste(tmp_current_directory, collapse = '/')
-            )
+            add_row(directory = list(tmp_current_directory))
           
           # print(dir_tree)
           
@@ -304,28 +280,50 @@ system_snapshot <- function(
     }
     
   }
+
+  #' Once done, go into each part of the tree, unlist, and sum to get total size.
+  dir_sizes <- directory_index %>% 
+    distinct(directory) %>% 
+    pmap_dfr(~{
+      
+      working_dir <- Reduce(`[[`, .x, init = dir_tree)
+      
+      tibble(
+        directory = list(.x),
+        dir_string = paste(.x, collapse = '/'),
+        dir_size = working_dir %>% unlist() %>% sum()
+      )
+      
+    })
+  
   
   list(
-    dir_tree = dir_tree,
-    directory_index = directory_index %>% distinct(dir_string, .keep_all = TRUE)
+    dir_tree  = dir_tree,
+    dir_sizes = dir_sizes 
   )
   
 } 
 
+#' Testing 
+if (F) {
+  
+  #' Check that folder traversal works 
+  system_snapshot(system_commands %>% str_subset('cd'), verbose = T)
+  
+  #' Check that adding directories found in `ls` works
+  system_snapshot(system_commands %>% str_subset('cd|ls|dir') %>% `[`(1:100), verbose = T)
+  
+  #' Testing subset of all commands
+  system_snapshot(system_commands[1:100], verbose = T)
+  
+}
 
-#' Check that folder traversal works 
-system_snapshot(system_commands %>% str_subset('cd'), verbose = T)
+#' Answer
+system_model <- system_snapshot(system_commands)
 
-#' Check that adding directories found in `ls` works
-system_snapshot(system_commands %>% str_subset('cd|ls|dir') %>% `[`(1:100), verbose = T)
+system_model$dir_sizes %>% 
+  # arrange(desc(dir_size)) %>% 
+  filter(dir_size <= 100000) %>% 
+  .$dir_size %>% sum()
 
-system_snapshot(system_commands[1:100], verbose = T)
-# later, create a lookup table with file sizes and then use that to sum???
-
-# or list(
-#   [[1]] = table(filenames, sizes),
-#   [[2]] = c('subdir1', 'subdir1')
-# )
-# First option might be easier to do the sum in - just unlist() the top level folder and lookup all filenames in table
-
-What if there are duplicate filenames??? What if we added vectors with name = filename and value = filesize? Then unlist and sum all later?
+#' Answer is [1581595]
