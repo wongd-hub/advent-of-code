@@ -2,6 +2,7 @@
 suppressPackageStartupMessages({
   library(tidyverse)
   library(microbenchmark)
+  library(testthat)
 })
 
 # Load helper functions ----

@@ -18,6 +18,7 @@
 
 source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
+
 ## 07a Part 1 ----
 ### Data ingestion ----
 #' Raw text file - use empty line to delimit the crate drawing and the instructions.
@@ -52,7 +53,7 @@ system_commands <- get_input(2022, 7)
  
 
 ### Revealing the file system ----
-#### Function Definitions ----
+#### Function definitions ----
 
 #' Handle '..'s in filepath
 #'
@@ -366,19 +367,11 @@ system_snapshot <- function(
   
 }
 
-#' Testing 
-if (F) {
-  
-  #' Check that folder traversal works 
-  system_snapshot(system_commands %>% str_subset('cd'), verbose = T)
-  
-  #' Check that adding directories found in `ls` works
-  system_snapshot(system_commands %>% str_subset('cd|ls|dir') %>% `[`(1:100), verbose = T)
-  
-  #' Testing subset of all commands
-  system_snapshot(system_commands[1:100], verbose = T)
-  
-}
+
+### Testing / unit tests ----
+
+source(file.path('2022', 'testthat', '07-tests.R'))
+
 
 ### Answer ----
 system_model <- system_snapshot(system_commands)
@@ -389,6 +382,7 @@ system_model$dir_sizes %>%
   .$dir_size %>% sum()
 
 #' Answer is [1581595]
+
 
 ## 07b Part 2 ----
 
