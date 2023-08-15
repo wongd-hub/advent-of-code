@@ -39,7 +39,7 @@ jobs:
         cat header.md script_list.md > README.md
         
         # Cleanup temporary files
-        rm header.md footer.md
+        rm header.md
 
     - name: Commit and push if it's not up-to-date
       run: |
