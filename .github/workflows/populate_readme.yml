@@ -2,42 +2,36 @@ name: Populate README
 
 on:
   push:
-    branches: 
-      - main
+    paths:
+      - '20**/*.R'
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+    - name: Check out code
+      uses: actions/checkout@v2
 
-      - name: Generate Script List Section
-        id: generate-section
-        run: |
-          echo "Script List" > script_list.md
-          for dir in $(find . -type d -regex "./[0-9]\{4\}"); do
-            echo "## $dir" >> script_list.md
-            for file in $(find $dir -name "*.R"); do
-              header=$(grep '^# \[' $file)
-              echo "- [$header]($file)" >> script_list.md
-            done
+    - name: Generate Script List Section
+      id: generate-section
+      run: |
+        echo "Script List" > script_list.md
+        for dir in $(find . -type d -regex "./[0-9]\{4\}"); do
+          echo "## $dir" >> script_list.md
+          for file in $(find $dir -name "*.R"); do
+            header=$(grep '^# \[' $file)
+            echo "- [$header]($file)" >> script_list.md
           done
-          echo "content=$(cat script_list.md)" >> $GITHUB_OUTPUT
+        done
 
+    - name: Update README.md
+      run: |
+        awk 'NR==FNR { if ($0 ~ /Script List/) exit; print; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
 
-      - name: Update README.md with Script List
-        run: |
-          awk -v val="${{ steps.generate-section.outputs.content }}" \
-          '/\[REPLACE THIS\]/{print val; next} 1' README.md > README.md.tmp && mv README.md.tmp README.md
-
-      - name: Commit and push if it's not up-to-date
-        run: |
-          git diff
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git diff --quiet && git diff --staged --quiet || (git add README.md; git commit -m "Update README.md"; git push origin HEAD:main --follow-tags)
-
+    - name: Commit and push if changed
+      run: |
+        git config user.name "GitHub Action"
+        git config user.email "action@github.com"
+        git add README.md
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update README.md with script list" && git push)
