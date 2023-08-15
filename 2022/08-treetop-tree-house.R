@@ -93,7 +93,7 @@ sum(tree_vis_results$visible_any)
 #' 
 #' What is the highest scenic score possible for any tree?
 
-#' Determine if a tree is visible from the outside
+#' Determine if a tree is visible outside the grid
 #'
 #' @params i, j i/j co-ordinates for the target tree
 scenic_score <- function(i, j) {
