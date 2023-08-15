@@ -18,8 +18,8 @@ jobs:
     - name: Generate Script List Section
       id: generate-section
       run: |
-        echo "Script List" > script_list.md
-        for dir in $(find . -type d -regex "./[0-9]\{4\}"); do
+        echo "" > script_list.md
+        for dir in $(find ./ -type d -regex "./[0-9]\{4\}"); do
           echo "## $dir" >> script_list.md
           # Use -maxdepth 1 to look only in the top level and sort for ordering
           for file in $(find $dir -maxdepth 1 -name "*.R" | sort); do
@@ -32,7 +32,7 @@ jobs:
 
     - name: Update README.md
       run: |
-        awk 'NR==FNR { if ($0 ~ /Script List/) exit; print; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
+        awk 'NR==FNR { if ($0 ~ /Script List/) { print; exit; } print; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
         cat README.md
 
     - name: Commit and push if it's not up-to-date
