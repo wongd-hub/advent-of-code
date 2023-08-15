@@ -62,7 +62,7 @@ system_commands <- get_input(2022, 7)
 #' if this were passed in as part of a larger command (e.g. "hello/../world").
 #' Instead, we'll check the current directory for '..'s every time it's updated
 #' and remove them + the elements immediately preceding them to simulate moving
-#' up one dir lvl.
+#' up one dir level
 #'
 #' @param directory A character vector representing the current directory, each
 #'   element being a directory level
