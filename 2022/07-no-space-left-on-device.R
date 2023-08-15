@@ -24,7 +24,7 @@ source(file.path('2022', 'utils', 'libs_and_funs.R'))
 #' Raw text file - use empty line to delimit the crate drawing and the instructions.
 system_commands <- get_input(2022, 7)
 
-#' Two things we need to do 
+#' Two things we need to do are:
 #' - Determine the directory structure
 #' - Determine the files in each directory
 
