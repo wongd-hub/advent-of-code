@@ -19,8 +19,10 @@ jobs:
         echo "Script List" > script_list.md
         for dir in $(find . -type d -regex "./[0-9]\{4\}"); do
           echo "## $dir" >> script_list.md
-          for file in $(find $dir -name "*.R"); do
-            header=$(grep '^# \[' $file)
+          # Use -maxdepth 1 to look only in the top level and sort for ordering
+          for file in $(find $dir -maxdepth 1 -name "*.R" | sort); do
+            # Extract the header using sed
+            header=$(sed -n '1p' $file | sed 's/^# \(.*\) ----/\1/')
             echo "- [$header]($file)" >> script_list.md
           done
         done
