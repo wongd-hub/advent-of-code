@@ -2,7 +2,7 @@
 #' https://adventofcode.com/2022/day/8
 
 #' You come across a grid of trees. We want to see how many of the trees are
-#' visible from the outside of the grid for the elves to build a treehouse. A
+#' visible from the outside of the grid for the elves to build a tree-house. A
 #' tree is only visible from outside the grid if:
 #' 
 #'  - The tree is on the outskirts of the grid (ie. is on the outside layer of 
