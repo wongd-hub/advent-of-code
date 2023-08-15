@@ -5,7 +5,7 @@
 #' visible from the outside of the grid for the elves to build a treehouse. A
 #' tree is only visible from outside the grid if:
 #' 
-#'  - The tree is on the outskirts of the grid (ie. is in the outside layer of 
+#'  - The tree is on the outskirts of the grid (ie. is on the outside layer of 
 #'    the grid)
 #'  - The tree is taller than all other trees from any of the left, top, right, 
 #'    or bottom sides

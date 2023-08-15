@@ -28,14 +28,16 @@ jobs:
             echo "- [$header]($file)" >> script_list.md
           done
         done
+        cat script_list.md
 
     - name: Update README.md
       run: |
         awk 'NR==FNR { if ($0 ~ /Script List/) exit; print; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
+        cat README.md
 
     - name: Commit and push if it's not up-to-date
       run: |
         git diff
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions[bot]"
-        git diff --quiet && git diff --staged --quiet || (git add README.md; git commit -m "Update README.md"; git push origin HEAD:main --follow-tags)
+        git diff --quiet && git diff --staged --quiet || (git add README.md; git commit -m "AUTO Update README.md"; git push origin HEAD:main --follow-tags)
