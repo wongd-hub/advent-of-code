@@ -32,7 +32,8 @@ jobs:
 
     - name: Update README.md
       run: |
-        awk 'NR==FNR { print; next } !flag && /Script List/ { flag=1; next } flag' README.md script_list.md > temp.md && mv temp.md README.md
+        line_num=$(grep -n "Script List" README.md | cut -d: -f1)
+        sed -e "${line_num}r script_list.md" README.md > temp.md && mv temp.md README.md
         cat README.md
 
     - name: Commit and push if it's not up-to-date

@@ -2,7 +2,7 @@
 #' https://adventofcode.com/2022/day/2
 
 #' The elves are now playing Rock Paper Scissors. They provide you with a
-#' strategy guide.
+#' strategy guide to use:
 #'
 #' - Rock defeats Scissors, Scissors defeats Paper, and Paper defeats Rock
 #' - In the strategy guide, the first column tells you what your opponent plays, 
