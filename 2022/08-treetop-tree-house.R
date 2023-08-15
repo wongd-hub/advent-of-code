@@ -125,7 +125,7 @@ scenic_score <- function(i, j) {
   view_distances %>%
     #' Are any of the directions TRUE?
     mutate(scenic_score = left * top * right * bottom) %>% 
-    #' Add co-ordinates to results
+    #' Add co-ordinates to results table
     mutate(i = i, j = j, .before = 1)
   
 }

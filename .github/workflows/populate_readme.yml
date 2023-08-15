@@ -33,7 +33,7 @@ jobs:
     - name: Update README.md
       run: |
         # Split README.md into two parts: header and footer
-        awk '/^## Script List/ {exit} {print}' README.md > header.md
+        awk 'NR==FNR && /^## Script List/ {f=1; print; next} !f {print}' README.md > header.md
         
         # Concatenate the header & script_list to form the new README.md
         cat header.md script_list.md > README.md
