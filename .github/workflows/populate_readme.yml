@@ -17,9 +17,7 @@ jobs:
 
     - name: Debug Find Command
       run: |
-        pwd
         find . -type d -regex "./[0-9]\{4\}" 
-        find ./ -type d -regex "./[0-9]\{4\}" 
 
     - name: Generate Script List Section
       id: generate-section

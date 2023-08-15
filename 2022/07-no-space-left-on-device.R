@@ -21,7 +21,7 @@ source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
 ## 07a Part 1 ----
 ### Data ingestion ----
-#' Raw text file - use empty line to delimit the crate drawing and the instructions.
+#' Raw text file - use empty line to delimit the crate drawing and the instructions
 system_commands <- get_input(2022, 7)
 
 #' Two things we need to do are:
