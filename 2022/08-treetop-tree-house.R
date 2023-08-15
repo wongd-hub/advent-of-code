@@ -36,7 +36,7 @@ tree_matrix <- tree_grid %>%
 ### Problem setup ----
 
 #' We want to take every i/j pair (row i, column j) and determine whether all
-#' the heights in all four directions are smaller
+#' the heights in all four directions are smaller than the current tree
 
 #' Generate i/j pairs
 ij_pairs <- crossing(i = 1:nrow(tree_matrix), j = 1:ncol(tree_matrix))
