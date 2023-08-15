@@ -32,12 +32,14 @@ jobs:
 
     - name: Update README.md
       run: |
-        # Delete everything from "Script List" to the end of the file
-        sed '/^## Script List/,$d' README.md > temp.md
-        mv temp.md README.md
-        line_num=$(grep -n "## Script List" README.md | cut -d: -f1)
-        sed -e "${line_num}r script_list.md" README.md > temp.md && mv temp.md README.md
-        cat README.md
+        # Split README.md into two parts: header and footer
+        awk '/^## Script List/ {exit} {print}' README.md > header.md
+        
+        # Concatenate the header & script_list to form the new README.md
+        cat header.md script_list.md > README.md
+        
+        # Cleanup temporary files
+        rm header.md footer.md
 
     - name: Commit and push if it's not up-to-date
       run: |

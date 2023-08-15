@@ -270,7 +270,7 @@ handle_list_dir <- function(
 #'
 #' Loops over all system commands/outputs and parses them to create a snapshot
 #' of the directory structure (`dir_tree`) and a table with the size of each
-#' folder (`dir_size`, derived from `directory_index`)
+#' folder (`dir_size`, derived from `directory_index`).
 #'
 #' @param commands A character vector containing the commands/outputs
 #' @param symbols A list containing all relevant command line symbols
