@@ -11,7 +11,9 @@ jobs:
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.REPO_ACCESS_TOKEN }}
 
     - name: Generate Script List Section
       id: generate-section
@@ -31,9 +33,9 @@ jobs:
       run: |
         awk 'NR==FNR { if ($0 ~ /Script List/) exit; print; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
 
-    - name: Commit and push if changed
+    - name: Commit and push if it's not up-to-date
       run: |
-        git config user.name "GitHub Action"
-        git config user.email "action@github.com"
-        git add README.md
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update README.md with script list" && git push)
+        git diff
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        git diff --quiet && git diff --staged --quiet || (git add README.md; git commit -m "Update README.md"; git push origin HEAD:main --follow-tags)
