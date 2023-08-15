@@ -32,6 +32,9 @@ jobs:
 
     - name: Update README.md
       run: |
+        # Delete everything from "Script List" to the end of the file
+        sed '/^## Script List/,$d' README.md > temp.md
+        mv temp.md README.md
         line_num=$(grep -n "## Script List" README.md | cut -d: -f1)
         sed -e "${line_num}r script_list.md" README.md > temp.md && mv temp.md README.md
         cat README.md
