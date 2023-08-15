@@ -13,3 +13,4 @@ This repo stores my [Advent of Code](https://adventofcode.com/) solutions, solve
 - [06 Tuning Trouble](./2022/06-tuning-trouble.R)
 - [07 No Space Left On Device](./2022/07-no-space-left-on-device.R)
 - [08 Treetop Tree House](./2022/08-treetop-tree-house.R)
+- [09 Rope Bridge](./2022/09-rope-bridge.R)
