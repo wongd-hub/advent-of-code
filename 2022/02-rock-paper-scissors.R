@@ -50,7 +50,7 @@ get_strategy_table <- function(.strategy, .strategy_tbl) {
 
 #' Get round score
 #' 
-#' Determines the outcome of a round from player 1's perspective
+#' Determines the outcome of a round from player 1's perspective.
 #' 
 #' NB: Could programmatically create this from an arbitrary set of rules
 #' passed to the main function, but since the rules are relatively simple,

@@ -20,7 +20,7 @@ jobs:
       run: |
         echo "" > script_list.md
         for dir in $(find . -type d -regex "./[0-9][0-9][0-9][0-9]" ); do
-          echo "## $dir" >> script_list.md
+          echo "### $dir" >> script_list.md
           # Use -maxdepth 1 to look only in the top level and sort for ordering
           for file in $(find $dir -maxdepth 1 -name "*.R" | sort); do
             # Extract the header using sed
@@ -32,7 +32,7 @@ jobs:
 
     - name: Update README.md
       run: |
-        line_num=$(grep -n "Script List" README.md | cut -d: -f1)
+        line_num=$(grep -n "## Script List" README.md | cut -d: -f1)
         sed -e "${line_num}r script_list.md" README.md > temp.md && mv temp.md README.md
         cat README.md
 
