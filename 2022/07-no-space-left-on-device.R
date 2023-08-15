@@ -266,7 +266,7 @@ handle_list_dir <- function(
   
 }
 
-#' Create a system snapshot and calculate the size of each folder
+#' Create a system snapshot and calculate size of each folder
 #'
 #' Loops over all system commands/outputs and parses them to create a snapshot
 #' of the directory structure (`dir_tree`) and a table with the size of each

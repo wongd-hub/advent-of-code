@@ -15,10 +15,6 @@ jobs:
       with:
         token: ${{ secrets.REPO_ACCESS_TOKEN }}
 
-    - name: Debug Find Commandff
-      run: |
-        find . -type d -regex "./[0-9]{4}" 
-
     - name: Generate Script List Section
       id: generate-section
       run: |
@@ -36,7 +32,7 @@ jobs:
 
     - name: Update README.md
       run: |
-        awk 'NR==FNR { print; if ($0 ~ /Script List/) exit; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
+        awk 'NR==FNR { print; next } !flag && /Script List/ { flag=1; next } flag' README.md script_list.md > temp.md && mv temp.md README.md
         cat README.md
 
     - name: Commit and push if it's not up-to-date
