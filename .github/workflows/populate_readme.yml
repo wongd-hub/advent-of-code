@@ -1,0 +1,42 @@
+name: Populate README
+
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+
+      - name: Generate Script List Section
+        id: generate-section
+        run: |
+          echo "Script List" > script_list.md
+          for dir in $(find . -type d -regex "./[0-9]\{4\}"); do
+            echo "## $dir" >> script_list.md
+            for file in $(find $dir -name "*.R"); do
+              header=$(grep '^# \[' $file)
+              echo "- [$header]($file)" >> script_list.md
+            done
+          done
+          echo "::set-output name=content::$(cat script_list.md)"
+
+      - name: Update README.md with Script List
+        run: |
+          awk -v val="${{ steps.generate-section.outputs.content }}" \
+          '/\[REPLACE THIS\]/{print val; next} 1' README.md > README.md.tmp && mv README.md.tmp README.md
+
+      - name: Commit and push if it's not up-to-date
+        run: |
+          git diff
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git diff --quiet && git diff --staged --quiet || (git add README.md; git commit -m "Update README.md"; git push origin HEAD:main --follow-tags)
+
