@@ -26,7 +26,8 @@ jobs:
               echo "- [$header]($file)" >> script_list.md
             done
           done
-          echo "::set-output name=content::$(cat script_list.md)"
+          echo "content=$(cat script_list.md)" >> $GITHUB_OUTPUT
+
 
       - name: Update README.md with Script List
         run: |
