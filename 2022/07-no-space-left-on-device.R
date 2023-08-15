@@ -2,7 +2,7 @@
 #' https://adventofcode.com/2022/day/7
 
 #' You are trying to update the device but have run out of space. You decide to
-#' browse the file system to see what you can delete.
+#' browse the file system to see what you can delete to make more room.
 #'
 #' - The file system is composed of files and directories, the outermost directory is /
 #' - Console commands are the same as bash - `cd` and `ls` are the main functions used
