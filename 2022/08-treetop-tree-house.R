@@ -133,6 +133,7 @@ scenic_score <- function(i, j) {
 ### Answer ---
 scenic_score_results <- ij_pairs %>% pmap_dfr(scenic_score)
 
+#' Get the maximum scenic score
 max(scenic_score_results$scenic_score)
 
 #' Answer is [1798]
