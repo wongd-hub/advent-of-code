@@ -32,7 +32,7 @@ jobs:
 
     - name: Update README.md
       run: |
-        awk 'NR==FNR { if ($0 ~ /Script List/) { print; exit; } print; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
+        awk 'NR==FNR { print; if ($0 ~ /Script List/) exit; next } 1' README.md script_list.md > temp.md && mv temp.md README.md
         cat README.md
 
     - name: Commit and push if it's not up-to-date

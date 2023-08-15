@@ -18,7 +18,7 @@
 #'  35390
 #' 
 #'  - The top left 5 is visible from the top and left
-#'  - The top right 1 is not visible
+#'  - The top right 1 is not visible from any side
 
 source(file.path('2022', 'utils', 'libs_and_funs.R'))
 
