@@ -13,7 +13,7 @@ if (F) {
   
 }
 
-# Unit tests ----
+## Unit tests ----
 
 test_that(
   'handle_dir parses .. correctly',
