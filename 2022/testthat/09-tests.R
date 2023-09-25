@@ -1,7 +1,7 @@
 # 09 Testing ----
 
 #' #' Plotting steps
-#' dat <- move_H(
+#' dat <- follow_h(
 #'   origin_coords, 
 #'   head_directions, 
 #'   verbose = F
@@ -77,19 +77,19 @@ test_that(
 )
 
 test_that(
-  'Check move_H() function',
+  'Check follow_h() function',
   {
     
     test_instr <- c("D 1", "L 2", "D 2", "L 1", "R 1", "D 1", "R 2", "U 1", "R 1", "D 2")
     
     expect_equal(
-      move_H(origin_coords, test_instr, verbose = F)$coord_tracker %>% 
+      follow_h(origin_coords, test_instr, verbose = F)$coord_tracker %>% 
         distinct(t_x, t_y) %>% 
         nrow(),
       7
     )
     expect_equal(
-      move_H(origin_coords, test_instr, verbose = F)$coord_tracker %>% 
+      follow_h(origin_coords, test_instr, verbose = F)$coord_tracker %>% 
         nrow(),
       1 + sum(str_sub(test_instr, 3, 3) %>% as.numeric())
     )
@@ -97,7 +97,7 @@ test_that(
     provided_instr <- c('R 4', 'U 4', 'L 3', 'D 1', 'R 4', 'D 1', 'L 5', 'R 2')
     
     expect_equal(
-      move_H(origin_coords, provided_instr, verbose = F)$coord_tracker %>% 
+      follow_h(origin_coords, provided_instr, verbose = F)$coord_tracker %>% 
         distinct(t_x, t_y) %>% 
         nrow(),
       13
