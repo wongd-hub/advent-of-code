@@ -52,55 +52,55 @@ origin_coords <- list(
 )
 
 
-#' Calculate distance between H and T
+#' Calculate distance between two points
 #' 
-#' We need a way to calculate the number of steps away two different points are on the grid
+#' We need a way to calculate the number of steps away two different points are
+#' on the grid. We're calculating from the perspective of the [subject] here;
+#' i.e. which direction does the subject need to move to catch the target?
 #' 
-#' Returns a vector of the direction and distance of H from the perspective of
-#' T. i.e. The direction of H when looking from T.
-#' 
-#' @param coord List of head and tail co-ordinates
-#' @param touch_assessment Whether to test if H and T are touching
-get_ht_dist <- function(coord, touch_assessment = TRUE) {
+#' @param .subject_coord Vector of subject x and y co-ordinates
+#' @param .target_coord Vector of target x and y co-ordinates
+#' @param touch_assessment Whether to test if subject and target are touching
+get_dist <- function(.subject_coord, .target_coord, touch_assessment = TRUE) {
   
   dist <- c(
-    'x' = coord$h[['x']] - coord$t[['x']], 
-    'y' = coord$h[['y']] - coord$t[['y']]
+    'x' = .target_coord[['x']] - .subject_coord[['x']], 
+    'y' = .target_coord[['y']] - .subject_coord[['y']]
   )
   
   #' If no distances are smaller than or equal to 1 then H and T are [not]
   #' touching.
-  if (touch_assessment) {
-    dist <- c(dist, 'touching' = !any(abs(dist) > 1))
-  }
+  if (touch_assessment) dist <- c(dist, 'touching' = !any(abs(dist) > 1))
   
   dist
   
 }
 
 
-#' Move T towards H
+#' Move subject towards target
 #' 
-#' Moves T towards H by one unit
-#' 
-#' @param .coord Coordinates list
+#' @param subject_coord Vector of subject x and y co-ordinates
+#' @param target_coord Vector of target x and y co-ordinates
 #' @param move_factor How much to move T each time
 #' @param verbose Boolean - whether to print logs
-move_t_to_h <- function(.coord, move_factor = 1, verbose = F) {
+move_subject_to_target <- function(subject_coord, target_coord, move_factor = 1, verbose = F) {
   
-  dist <- get_ht_dist(coord = .coord)
+  .sub_coord <- subject_coord
+  .tar_coord <- target_coord
+  
+  dist <- get_dist(.subject_coord = .sub_coord, .target_coord = .tar_coord)
   
   if (verbose) {
     
     cat('NEW MOVE ----\n')
-    cat('\tH:', .coord$h, '\n\tT:', .coord$t, '\n')
+    cat('\tTarget:', .tar_coord, '\n\tSubject:', .sub_coord, '\n')
     cat('\tD:', dist[c('x', 'y')], ifelse(dist[['touching']] == 1, '- touching', '- NOT touching'), '\n')
     
   }
   
   if (dist[['touching']] != 1) {
     
-    if (verbose) cat('\tH, T not touching, moving T towards H\n')
+    if (verbose) cat('\tPoints not touching, moving subject towards target\n')
     
     #' If in up, down, left, right direction - straightforward, make a move
     if (any(dist[1:2] == 0)) {
@@ -111,8 +111,9 @@ move_t_to_h <- function(.coord, move_factor = 1, verbose = F) {
       #' dist$touching should be TRUE. Find the direction that is non-zero.
       move_direction <- names(dist)[which(dist[1:2] != 0)]
       
-      #' Move the co-ord of the tail in the direction of the head
-      .coord$t[[move_direction]] <- .coord$t[[move_direction]] + move_factor * sign(dist[[move_direction]])
+      #' Move the co-ord of the tail in the direction of the head, use `sign` to
+      #' normalise the vector direction first
+      .sub_coord[[move_direction]] <- .sub_coord[[move_direction]] + move_factor * sign(dist[[move_direction]])
       
       if (verbose) cat('\tMove:', move_direction, move_factor * sign(dist[[move_direction]]), '\n')
       
@@ -123,8 +124,8 @@ move_t_to_h <- function(.coord, move_factor = 1, verbose = F) {
       #' If diagonal (equivalent to `!any(dist[1:2] == 0)`), move diagonally towards head
       
       #' Figure out x and y direction to move, then move in that direction diagonally
-      .coord$t[['x']] <- .coord$t[['x']] + move_factor * sign(dist[['x']])
-      .coord$t[['y']] <- .coord$t[['y']] + move_factor * sign(dist[['y']])
+      .sub_coord[['x']] <- .sub_coord[['x']] + move_factor * sign(dist[['x']])
+      .sub_coord[['y']] <- .sub_coord[['y']] + move_factor * sign(dist[['y']])
 
       if (verbose) cat('\tMove:', move_factor * sign(dist[['x']]), move_factor * sign(dist[['x']]), '\n')
       
@@ -132,7 +133,10 @@ move_t_to_h <- function(.coord, move_factor = 1, verbose = F) {
 
   }
   
-  return (.coord)
+  list(
+   subject = .sub_coord,
+   target  = .tar_coord
+  )
   
 }
 
@@ -204,7 +208,8 @@ follow_h <- function(
       
       if (verbose) cat(' ', glue('H: ({coords_wrk$h[["x"]]}, {coords_wrk$h[["y"]]})'), '\n')
       
-      coords_wrk_tmp <- move_t_to_h(coords_wrk, move_factor = movement_size_t)
+      coords_wrk_tmp <- move_subject_to_target(coords_wrk$t, coords_wrk$h, move_factor = movement_size_t) %>% 
+        set_names(c('t', 'h'))
       
       if (!identical(coords_wrk, coords_wrk_tmp) & verbose) {
         cat('   ', glue('T not touching H, moved from ({
@@ -262,7 +267,7 @@ follow_h(
 #' Note that different kinds of movements are possible due to the new length of
 #' the rope. For example, the 2-9 won't exactly track where the 1 has been if
 #' the one moves to a spot where it would not touch the 2 anymore. We need a way
-#' to apply the `move_t_to_h` function to [each knot in the rope].
+#' to apply the `move_subject_to_target` function to [each knot in the rope].
 
 #' Move H and make knots in rope follow
 #' 
@@ -288,7 +293,7 @@ follow_h_longer_rope <- function(
   #  - Need to loop through each knot in order, updating the section for each move.
   #  - move_h_to_t needs to be generalised to allow for any two generalised points.
   #    - Make it two co-ord args: subject, target
-  #    - get_ht_dist will also need to edited for this to work
+  #    - get_dist will also need to edited for this to work
   
   coords_ex_h <- initial_coords[names(initial_coords) != 'h']
   
@@ -365,7 +370,7 @@ follow_h_longer_rope <- function(
       
       if (verbose) cat(' ', glue('H: ({coords_wrk$h[["x"]]}, {coords_wrk$h[["y"]]})'), '\n')
       
-      coords_wrk_tmp <- move_t_to_h(coords_wrk, move_factor = movement_size_t)
+      coords_wrk_tmp <- move_subject_to_target(coords_wrk, move_factor = movement_size_t)
       
       if (!identical(coords_wrk, coords_wrk_tmp) & verbose) {
         cat('   ', glue('T not touching H, moved from ({
