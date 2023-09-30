@@ -245,11 +245,13 @@ follow_h <- function(
 
 ### Answer ----
 
-follow_h(
+normal_rope_results <- follow_h(
   origin_coords, 
   head_directions, 
   verbose = F
-)$coord_tracker %>% 
+)$coord_tracker
+
+normal_rope_results %>% 
   distinct(t_x, t_y) %>% 
   nrow()
 
@@ -273,133 +275,114 @@ follow_h(
 #' 
 #' @param initial_coords A list of initial H and knot coordinates; the order of
 #'   knot coordinates provided matters as each knot is taken sequentially in the
-#'   rope, number of knots is taken from the length of this list
+#'   rope, number of knots is taken from the length of this list. First knot must 
+#'   be named 'h'.
 #' @param instruction_list Character vector of instructions
-#' @param movement_size_h Movement step size - how much to move H each step
-#' @param movement_size_t Movement step size - how much to move T each step
-#' @param verbose Boolean determining whether to print logs
 follow_h_longer_rope <- function(
   initial_coords   = NULL,
-  instruction_list = NULL,
-  movement_size_h  = 1,
-  movement_size_t  = 1,
-  verbose          = F
+  instruction_list = NULL
 ) {
-  
-  if (any(is.null(initial_coords), is.null(instruction_list))) 
-    stop('Please provide both initial coordinates and an instruction list')
-  
-  # TODO: 
-  #  - Need to loop through each knot in order, updating the section for each move.
-  #  - move_h_to_t needs to be generalised to allow for any two generalised points.
-  #    - Make it two co-ord args: subject, target
-  #    - get_dist will also need to edited for this to work
-  
-  coords_ex_h <- initial_coords[names(initial_coords) != 'h']
-  
-  if (verbose) {
-    cat(glue('There are {length(coords_ex_h)} knot/s'))
-    cat('Begin parsing instructions\n')
-  }
-  
-  #' Init objects/results
+
+  #' Init objects/results collector
   coords_wrk  <- initial_coords
-  results_lst <- vector('list', length(coords_ex_h)) %>% 
+  results_lst <- vector('list', length(coords_wrk)) %>% 
     map(~{
-      vector('list', sum(str_sub(instruction_list, 3) %>% as.numeric()) * movement_size_h + 1)
+      vector('list', sum(str_sub(instruction_list, 3) %>% as.numeric()) + 1)
     }) %>% 
-    set_names(names(coords_ex_h))
+    set_names(names(coords_wrk))
   
-  
-  for (knot in names(coords_ex_h)) {
-    
-    results_lst[[knot]][[1]] <- initial_coords[
-      names(initial_coords) %in% c(knot, 'h')
-    ] %>% 
-      unlist() %>% 
-      enframe() %>% 
-      mutate(
-        name = str_replace(name, paste0('^', knot), 'k') %>% 
-          str_replace('\\.', '_')
-      ) %>% 
-      pivot_wider() %>% 
-      mutate(knot = knot)
-    
-    
-    
-    
-  }
-  
-  
-  # TODO: Continue adding this to the above for-loop
-  
-  #' Hard to figure out which item in the list we need to assign to using just
-  #' `i` and `j` since each instruction has a different number of instructions
-  #' in it. Easier to set up a separate counter and increment it each time we
-  #' add a new coordinate to the table.
+  #' Set up a separate counter and increment it each time we add a new
+  #' coordinate to the table.
   overall_counter <- 2
   
-  direction_signs_h <- list(
-    U = c(x = 0, y = movement_size_h),
-    D = c(x = 0, y = -movement_size_h),
-    L = c(x = -movement_size_h, y = 0),
-    R = c(x = movement_size_h, y = 0)
+  direction_signs_target <- list(
+    U = c(x = 0, y = 1),
+    D = c(x = 0, y = -1),
+    L = c(x = -1, y = 0),
+    R = c(x = 1, y = 0)
   )
   
   #' Loop through instructions
   for (i in seq_along(instruction_list)) {
-    loop thru knots here
-    if (verbose) cat('  Parsing instruction:', instruction_list[[i]], '\n')
     
     direction <- str_sub(instruction_list[[i]], 1, 1)
     steps     <- str_sub(instruction_list[[i]], 3) %>% as.numeric()
     
-    
-    if (verbose) 
-      cat('   ', glue('Start - H: ({coords_wrk$h[["x"]]}, {coords_wrk$h[["y"]]}) T: ({coords_wrk$t[["x"]]}, {coords_wrk$t[["y"]]})'), '\n')
-    
     for (j in seq_len(steps)) {
       
-      if (verbose) cat('   ', glue('Moving H {direction} by {movement_size_h}...'))
-      
-      # Move H a step in the direction instructed
-      coords_wrk$h <- c(
-        x = coords_wrk$h[['x']] + direction_signs_h[[direction]][['x']],
-        y = coords_wrk$h[['y']] + direction_signs_h[[direction]][['y']]
-      )
-      
-      if (verbose) cat(' ', glue('H: ({coords_wrk$h[["x"]]}, {coords_wrk$h[["y"]]})'), '\n')
-      
-      coords_wrk_tmp <- move_subject_to_target(coords_wrk, move_factor = movement_size_t)
-      
-      if (!identical(coords_wrk, coords_wrk_tmp) & verbose) {
-        cat('   ', glue('T not touching H, moved from ({
-          coords_wrk$t[["x"]]}, {coords_wrk$t[["y"]]
-        }) to ({
-          coords_wrk_tmp$t[["x"]]}, {coords_wrk_tmp$t[["y"]]
-        })'), '\n')
-      } else if (verbose) {
-        cat('   ', glue('T touching H still - no movement, stays at ({coords_wrk_tmp$t[["x"]]}, {coords_wrk_tmp$t[["y"]]})'), '\n')
+      for (knot_i in seq_along(coords_wrk)) {
+        
+        if (names(coords_wrk)[knot_i] == 'h' & knot_i == 1) {
+          
+          #' Handling 'H'
+          #' Move H a step in the direction instructed
+          coords_wrk$h <- c(
+            x = coords_wrk$h[['x']] + direction_signs_target[[direction]][['x']],
+            y = coords_wrk$h[['y']] + direction_signs_target[[direction]][['y']]
+          )
+          
+        } else {
+          
+          #' Otherwise, handle the second knot on-wards
+          coords_wrk_tmp <- move_subject_to_target(coords_wrk[[knot_i]], coords_wrk[[knot_i - 1]])
+          
+          if (!identical(coords_wrk[[knot_i]], coords_wrk_tmp$subject)) {
+            
+            coords_wrk[[knot_i]] <- coords_wrk_tmp$subject
+            
+          }
+          
+        }
+        
+        #' Save down to results list
+        if (overall_counter == 2) {
+          
+          #' If on first iteration, also save down origin points
+          results_lst[[knot_i]][[1]] <- tibble(
+            x = initial_coords[[knot_i]][['x']],
+            y = initial_coords[[knot_i]][['y']]
+          )
+          
+        }
+        
+        results_lst[[knot_i]][[overall_counter]] <- tibble(
+          x = coords_wrk[[knot_i]][['x']],
+          y = coords_wrk[[knot_i]][['y']]
+        )
+        
       }
-      
-      results_lst[[overall_counter]] <- tibble(
-        t_x = coords_wrk_tmp$t[['x']],
-        t_y = coords_wrk_tmp$t[['y']],
-        h_x = coords_wrk_tmp$h[['x']],
-        h_y = coords_wrk_tmp$h[['y']],
-      )
-      
+
       overall_counter <- overall_counter + 1
-      
-      coords_wrk <- coords_wrk_tmp
       
     }
     
   }
   
+  #' Return
   list(
-    final_coord = coords_wrk,
-    coord_tracker = bind_rows(results_lst)
+    final_coord   = coords_wrk,
+    coord_tracker = results_lst %>% 
+      lapply(bind_rows) %>% 
+      bind_rows(.id = 'knot')
   )
   
 }
+
+#' Setting up initial co-ordinates list
+list_items <- c('h', 1:9) # 'Automatically coerces to character
+initial_coord_points <- list_items %>% 
+  lapply(\(x) c('x' = 0, 'y' = 0)) %>% 
+  set_names(list_items)
+
+longer_rope_results <- follow_h_longer_rope(
+  initial_coord_points, 
+  head_directions, 
+  verbose = F
+)$coord_tracker 
+
+longer_rope_results %>% 
+  filter(knot == '9') %>%
+  distinct(x, y) %>% 
+  nrow()
+
+#' Answer is [2793]
