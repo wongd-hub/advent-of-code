@@ -14,3 +14,4 @@ This repo stores my [Advent of Code](https://adventofcode.com/) solutions, solve
 - [07 No Space Left On Device](./2022/07-no-space-left-on-device.R)
 - [08 Treetop Tree House](./2022/08-treetop-tree-house.R)
 - [09 Rope Bridge](./2022/09-rope-bridge.R)
+- [10 Cathode-Ray Tube](./2022/10-cathode-ray-tube.R)
