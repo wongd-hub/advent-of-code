@@ -44,6 +44,7 @@ source(file.path('2022', 'utils', 'libs_and_funs.R'))
 #' Raw text file
 monkey_business <- get_input(2022, 11)
 
+
 ### Function definitions ----
 
 #' Pull initial monkey details
@@ -269,6 +270,7 @@ sim_results %>%
 
 #' Answer is [78960]
 
+
 ## 11b Part 2 ----
 
 # In this part of the question, our worry is no longer divided by 3 each time
@@ -280,25 +282,37 @@ sim_results %>%
 # affect.
 
 # The main components of the test are as follows:
-# - The current worry level of the item, which is a product of multiple operations that led up to that point.
-#    The issue is that the operations can be addition, multiplication or squaring,
-#    making storing the order of operations difficult.
-#    Also, the documentation (?`%%`) states that "For double arguments, %% can be subject to catastrophic loss of 
-#    accuracy if x is much larger than y, and a warning is given if this is detected"
+# - The current worry level of the item, which is a product of multiple 
+#   operations that led up to that point.
+#    The issue is that the operations can be addition, multiplication or 
+#    squaring, making storing the order of operations difficult.
+#    Also, the documentation (?`%%`) states that "For double arguments, %% 
+#    can be subject to catastrophic loss of accuracy if x is much larger than 
+#    y, and a warning is given if this is detected"
 # - The number to divide by (division_test)
-
-# anxiety_sim_results <- simulate_monkey_business(rounds = 10000, anxiety_mode = T)
 
 # We're going to use modular arithmetic, which in a nutshell allows us to wrap
 # numbers around the modulus. Another thing to note is that all division tests
-# are prime, which might come in handy later. We'll need to track the number
-# across the different division tests (our base moduli, m).
+# are prime, which might come in handy later.
+#  - Instead of operating directly on the calculated worry level, we will take 
+#    the modulus of the worry level after each operation is performed.
+#  - We can then continue to operate on the modulus as usual, as long as we keep 
+#    taking the modulus of the result.
+#  - Note this works for addition, multiplication and squaring, but not division 
+#    (we don't need to divide by anything here - if we did we would need to find 
+#    the modular multiplicative inverse).
 
-# We'll exploit the fact that ...
+# This keeps our tracked number small (smaller than the modulus/division test),
+# while still giving us the same answer - whether the number is divisible by the
+# division test.
 
-#' Sim(ian)ulate a number of full monkey rounds
+# For a good explanation on modular arithmetic, see this video:
+# https://www.youtube.com/watch?v=lJ3CD9M3nEQ
+
+#' Sim(ian)ulate a number of full monkey rounds using modular arithmetic
 #'
-#' Run a full simulation of `rounds` number of rounds.
+#' Run a full simulation of `rounds` number of rounds using modular arithmetic
+#' to perform the throw target tests.
 #'
 #' @param mky_info List, output of `get_monkey_details()`
 #' @param rounds Integer, number of rounds to simulate
@@ -327,9 +341,7 @@ simulate_monkey_business_modulararithmetic <- function(
   run_operations <- function(list, mky) {
     
     list %>% 
-      map(~{
-        run_operation(mky, .x)
-      })
+      map(~{run_operation(mky, .x)})
       
   }
   
@@ -340,12 +352,11 @@ simulate_monkey_business_modulararithmetic <- function(
     
     worry_list[[item_id]] <- item_vals %>% 
       run_operations(mky = mky)  %>% 
-      calculate_modnums() %>% 
-      # This doesn't work when using modular arithmetic because we need to find
-      # the modular multiplicative inverse of 3 for each modulus base. Too much
-      # effort for now - first try running to get an answer.
-      {if (.anxiety_mode) (.) else floor(. / 3)}%>% 
-      calculate_modnums()
+      calculate_modnums() # %>% 
+      # # This doesn't work when using modular arithmetic because we need to find
+      # # the modular multiplicative inverse of 3 for each modulus base. Parked for now.
+      # {if (.anxiety_mode) (.) else floor(. / 3)}%>% 
+      # calculate_modnums()
     
     worry_list
     
@@ -406,7 +417,7 @@ simulate_monkey_business_modulararithmetic <- function(
   
   for (round in 1:rounds) {
     
-    print(round)
+    # print(round)
     
     for (mky in mky_names) {
       
@@ -418,7 +429,7 @@ simulate_monkey_business_modulararithmetic <- function(
       
       for (itm in 1:nrow(current_item)) {
         
-        item_num      <- current_item[itm,]$item_id
+        item_num <- current_item[itm,]$item_id
         
         # Inspection is now composed of:
         #  - Run operation on worry (modulo version)
@@ -429,9 +440,7 @@ simulate_monkey_business_modulararithmetic <- function(
         worry_modnums <- operate_and_mod(item_num, mky)
         
         # Run division test
-        mky_target    <- new_division_test(item_num, mky)
-        
-        # if (item_num %in% 1:6 & round == 1) cat('Item ', item_num, '\n', '  Mky ', mky, ' to ', mky_target, ' division test ', mky_info_wrk[[mky]][['division_test']], ' modulo ', worry_modnums[[item_num]][[mky]], '\n')
+        mky_target <- new_division_test(item_num, mky)
         
         #  Execute throw -- Remove item row from the inventory list, then add
         #  back with new holder
@@ -459,7 +468,9 @@ simulate_monkey_business_modulararithmetic <- function(
   
 }
 
-sim_results_mod <- simulate_monkey_business_modulararithmetic(rounds = 10000) # About 2 hours to run
+# About 2 hours to run
+# TODO: Optimise
+sim_results_mod <- simulate_monkey_business_modulararithmetic(rounds = 10000) 
 
 sim_results_mod %>% 
   .$throws_df %>% 
