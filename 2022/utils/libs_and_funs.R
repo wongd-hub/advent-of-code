@@ -1,7 +1,7 @@
 # Load packages ----
 suppressPackageStartupMessages({
   library(tidyverse)
-  library(microbenchmark)
+  # library(microbenchmark)
   library(testthat)
 })
 
