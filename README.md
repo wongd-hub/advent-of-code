@@ -15,3 +15,4 @@ This repo stores my [Advent of Code](https://adventofcode.com/) solutions, solve
 - [08 Treetop Tree House](./2022/08-treetop-tree-house.R)
 - [09 Rope Bridge](./2022/09-rope-bridge.R)
 - [10 Cathode-Ray Tube](./2022/10-cathode-ray-tube.R)
+- [11 Monkey in the Middle](./2022/11-monkey-business.R)
